@@ -1,0 +1,10 @@
+# Ignora a pasta de módulos do Electron (já instalada)
+/node_modules
+
+# Ignora a pasta de build do frontend
+/frontend/dist
+
+# EXTREMAMENTE IMPORTANTE:
+# Permite que o Git da raiz rastreie os arquivos do frontend, 
+# mas ignora o .git interno para não misturar os históricos.
+/frontend/.git
