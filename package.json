@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "description": "",
   "main": "electron-backend/main.js",
-"scripts": {
+  "scripts": {
     "build-frontend": "npm run build --prefix frontend",
-    "start-electron": "npm run build-frontend && electron ." 
+    "start-electron": "npm run build-frontend && electron ."
   },
   "keywords": [],
   "author": "",
