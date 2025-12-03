@@ -22,8 +22,6 @@ import MyDrawer from "../../components/MyDrawer";
 
 import { PacienteContext } from "../../context/PacienteContext";
 import { useMessage } from "../../context/MessageProvider";
-import Paciente from "../../Models/classPaciente";
-
 
 export default function Pacientes() {
   const [form] = Form.useForm();
@@ -40,21 +38,20 @@ export default function Pacientes() {
       content,
       duration: 2,
     });
-  }
+  };
 
   // useContext para pegar a lista de pacientes do PacienteContext
   const { pacientesList, addPaciente, removePaciente, updatePaciente } =
     useContext(PacienteContext);
 
-  const addPacienteHandler = (values) => {
-    const newPaciente = new Paciente(
-      Date.now(),
-      values.nomePaciente,
-      values.telefone,
-      values.email
-    );
+  const addPacienteHandler = async (values) => {
+    const newPaciente = {
+      nomePaciente: values.nomePaciente,
+      telefone: values.telefone,
+      email: values.email,
+    };
     try {
-      addPaciente(newPaciente);
+      await addPaciente(newPaciente);
       form.resetFields();
       setIsListEmpty(true);
       onClose();
@@ -117,7 +114,7 @@ export default function Pacientes() {
                 key={paciente.id}
                 grid={gridView}
                 pacienteId={paciente.id}
-                pacienteName={paciente.nome}
+                pacienteName={paciente.nomePaciente}
                 pacientePhone={paciente.telefone}
                 pacienteEmail={paciente.email}
               />
