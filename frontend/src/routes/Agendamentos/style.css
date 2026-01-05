@@ -1,0 +1,27 @@
+.event-cell {
+  margin-top: 4px;
+}
+
+.event-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.event-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  background-color: #1677ff;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
