@@ -15,6 +15,9 @@ import Financeiro from "./routes/Financeiro/index.jsx";
 import Agendamentos from "./routes/Agendamentos/index.jsx";
 import Login from "./routes/Login/index.jsx";
 import Cadastro from "./routes/Cadastro/index.jsx";
+import Locais from "./routes/Locais/index.jsx";
+import Servicos from "./routes/Servicos/index.jsx";
+import Horarios from "./routes/Horarios/index.jsx";
 
 const router = createBrowserRouter(
   [
@@ -37,6 +40,18 @@ const router = createBrowserRouter(
         {
           path: "agendamentos",
           element: <Agendamentos />
+        },
+        {
+          path: "locais",
+          element: <Locais />
+        },
+        {
+          path: "servicos",
+          element: <Servicos />
+        },
+        {
+          path: "horarios",
+          element: <Horarios />
         }
       ],
     },
