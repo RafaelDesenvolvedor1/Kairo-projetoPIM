@@ -6,7 +6,7 @@ export const Container = styled(Card)`
     display: flex;
     justify-content: center;
     align-items: center;
-    box-shadow: 10px 10px 5px 0px rgba(0, 0, 0, 0.75);
+    box-shadow: 10px 10px 20px 0px rgba(0, 0, 0, 0.75);
     transition: box-shadow 0.3s ease-in-out;
     padding: 1em;
     margin: 1em 0;
