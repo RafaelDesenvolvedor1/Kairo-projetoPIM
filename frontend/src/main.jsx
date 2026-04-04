@@ -18,6 +18,7 @@ import Cadastro from "./routes/Cadastro/index.jsx";
 import Locais from "./routes/Locais/index.jsx";
 import Servicos from "./routes/Servicos/index.jsx";
 import Horarios from "./routes/Horarios/index.jsx";
+import PacientesDates from "./routes/PacientesDates/index.jsx";
 
 const router = createBrowserRouter(
   [
@@ -32,6 +33,10 @@ const router = createBrowserRouter(
         {
           path: "pacientes",
           element: <Pacientes />
+        },
+        {
+          path: "pacientes/dates",
+          element: <PacientesDates />
         },
         {
           path: "financeiro",
