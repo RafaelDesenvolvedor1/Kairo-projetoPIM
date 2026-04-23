@@ -66,7 +66,7 @@ docker compose up --build
 ### Observações sobre Docker:
 - Os dados do MySQL são persistidos em um volume Docker.
 - O frontend roda em modo desenvolvimento com hot reload.
-- As variáveis de ambiente do frontend (`VITE_API_HOST`, `VITE_API_PORT`) já estão configuradas no docker-compose.yml para apontar para o serviço `backend` (nome do container).
+- A variável de ambiente do frontend (`VITE_API_PORT`) está configurada no docker-compose.yml para apontar para a porta do backend (3000). O host é obtido dinamicamente via `window.location.hostname`.
 - Para parar: `docker-compose down`
 - Para resetar dados do banco: `docker-compose down -v`
 
@@ -141,15 +141,14 @@ cp .env.example .env
 > Copy-Item .env.example .env
 > ```
 
-4. (Opcional) Ajuste as variáveis em `frontend/.env` conforme necessário:
+4. (Opcional) Ajuste a variável em `frontend/.env` conforme necessário:
 
 ```env
-VITE_API_HOST=localhost
 VITE_API_PORT=3000
 ```
 
-- `VITE_API_HOST`: Endereço do backend (pode ser IP, domínio ou localhost)
 - `VITE_API_PORT`: Porta onde o backend está rodando
+- O host é obtido dinamicamente via `window.location.hostname` (funciona tanto em localhost quanto em rede local)
 
 5. Inicie a aplicação:
 
