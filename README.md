@@ -67,8 +67,8 @@ docker compose up --build
 - Os dados do MySQL são persistidos em um volume Docker.
 - O frontend roda em modo desenvolvimento com hot reload.
 - A variável de ambiente do frontend (`VITE_API_PORT`) está configurada no docker-compose.yml para apontar para a porta do backend (3000). O host é obtido dinamicamente via `window.location.hostname`.
-- Para parar: `docker-compose down`
-- Para resetar dados do banco: `docker-compose down -v`
+- Para parar: `docker compose down`
+- Para resetar dados do banco: `docker compose down -v`
 
 ## Configuração Manual do Backend
 
