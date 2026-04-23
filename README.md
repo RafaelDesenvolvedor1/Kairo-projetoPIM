@@ -126,6 +126,23 @@ A aplicação frontend deve rodar em `http://localhost:5173`.
 - `frontend/src/` - código-fonte React
 - `backend/src/` - configuração do servidor, modelos e rotas
 
+## Arquivos de configuração
+
+### `.gitignore`
+
+O repositório possui um `.gitignore` configurado para ignorar:
+
+- Dependências (`node_modules/`, `package-lock.json`)
+- Variáveis de ambiente (`.env`, `.env.local`)
+- Builds e compilações (`dist/`, `build/`)
+- Logs e arquivos temporários
+- IDE e SO (`.vscode/`, `.idea/`, `.DS_Store`)
+- Diretório `/docs` (documentação interna)
+
+### `.env.example`
+
+O backend possui um arquivo `.env.example` com as variáveis de ambiente necessárias. Copie-o para `.env` e ajuste conforme sua configuração local.
+
 ## Como contribuir
 
 1. Faça um fork ou clone deste repositório.
