@@ -171,6 +171,7 @@ export default function Pacientes() {
           </Form.Item>
           <ButtonSubmit>Adicionar Paciente</ButtonSubmit>
           <ButtonWhatsapp>Enviar formulário de cadastro</ButtonWhatsapp>
+   
         </FormStyled>
       </MyDrawer>
     </Space>
