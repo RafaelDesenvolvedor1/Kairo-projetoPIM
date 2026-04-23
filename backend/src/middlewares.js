@@ -6,8 +6,10 @@ module.exports = (app) => {
   app.set("json spaces", 4);
   app.use(bodyParser.json());
   app.use(cors({
-    origin: 'http://localhost:5173'
-  }))
+      origin: '*', // Permite requisições de qualquer lugar (Windows, Linux, Celular)
+      methods: ['GET', 'POST', 'PUT', 'DELETE'],
+      allowedHeaders: ['Content-Type', 'Authorization']
+  }));
   // Middleware para remover o id do body
   app.use((req, res, next) => {
     if (req.body && req.body.id) {
