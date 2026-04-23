@@ -6,6 +6,8 @@ Monorepo com backend em Node.js/Express e frontend em React + Vite.
 
 - `backend/` - API REST usando Express, Sequelize e MySQL
 - `frontend/` - Aplicação React usando Vite
+- `Dockerfile` - Arquivo para containerizar o backend
+- `docker-compose.yml` - Orquestração dos serviços (backend, frontend, MySQL)
 
 ## Tecnologias principais
 
@@ -29,13 +31,45 @@ Monorepo com backend em Node.js/Express e frontend em React + Vite.
   - recharts
   - tiptap
 
+- Infraestrutura
+  - Docker
+  - Docker Compose
+
 ## Requisitos
 
-- Node.js 18+ (ou versão compatível)
-- npm ou yarn
-- MySQL rodando localmente ou remotamente
+- Docker e Docker Compose (recomendado para execução completa)
+- Ou, para execução manual:
+  - Node.js 18+ (ou versão compatível)
+  - npm ou yarn
+  - MySQL rodando localmente ou remotamente
 
-## Configuração do backend
+## Usando Docker (Recomendado)
+
+Para executar o projeto completo com Docker, siga estes passos:
+
+1. Certifique-se de que Docker e Docker Compose estão instalados.
+
+2. Na raiz do projeto, execute:
+
+```bash
+docker-compose up --build
+```
+
+- `--build` força a reconstrução das imagens.
+- Use `-d` para rodar em background: `docker-compose up -d --build`.
+
+3. Acesse:
+   - Frontend: `http://localhost:5173`
+   - Backend API: `http://localhost:3000`
+   - MySQL: Porta 3306 (usuário: `user`, senha: `password`, banco: `kairodb`)
+
+### Observações sobre Docker:
+- Os dados do MySQL são persistidos em um volume Docker.
+- O frontend roda em modo desenvolvimento com hot reload.
+- Para parar: `docker-compose down`
+- Para resetar dados do banco: `docker-compose down -v`
+
+## Configuração Manual do Backend
 
 1. Acesse a pasta do backend:
 
@@ -80,7 +114,7 @@ npm run start
 
 O servidor roda por padrão em `http://localhost:3000`.
 
-## Configuração do frontend
+## Configuração Manual do Frontend
 
 1. Acesse a pasta do frontend:
 
@@ -134,7 +168,6 @@ O repositório possui um `.gitignore` configurado para ignorar:
 - Builds e compilações (`dist/`, `build/`)
 - Logs e arquivos temporários
 - IDE e SO (`.vscode/`, `.idea/`, `.DS_Store`)
-- Diretório `/docs` (documentação interna)
 
 ### `.env.example`
 
