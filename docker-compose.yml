@@ -36,7 +36,7 @@ services:
       - projeto-pim-network
 
   frontend:
-    image: node:18
+    image: node:22
     container_name: projeto-pim-frontend
     restart: unless-stopped
     working_dir: /app
