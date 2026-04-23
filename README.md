@@ -121,8 +121,6 @@ A aplicação frontend deve rodar em `http://localhost:5173`.
 - Se a porta `3000` já estiver em uso, ajuste `PORT` em `backend/.env`.
 
 ## Pastas adicionais
-
-- `docs/diagramaImplementacao.2.asta` - arquivo de diagrama de implementação
 - `frontend/src/` - código-fonte React
 - `backend/src/` - configuração do servidor, modelos e rotas
 
