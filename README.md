@@ -39,7 +39,7 @@ Monorepo com backend em Node.js/Express e frontend em React + Vite.
 
 - Docker e Docker Compose (recomendado para execução completa)
 - Ou, para execução manual:
-  - Node.js 18+ (ou versão compatível)
+  - Node.js 22+ (ou versão compatível)
   - npm ou yarn
   - MySQL rodando localmente ou remotamente
 
@@ -52,11 +52,11 @@ Para executar o projeto completo com Docker, siga estes passos:
 2. Na raiz do projeto, execute:
 
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
 
 - `--build` força a reconstrução das imagens.
-- Use `-d` para rodar em background: `docker-compose up -d --build`.
+- Use `-d` para rodar em background: `docker compose up -d --build`.
 
 3. Acesse:
    - Frontend: `http://localhost:5173`
@@ -66,6 +66,7 @@ docker-compose up --build
 ### Observações sobre Docker:
 - Os dados do MySQL são persistidos em um volume Docker.
 - O frontend roda em modo desenvolvimento com hot reload.
+- As variáveis de ambiente do frontend (`VITE_API_HOST`, `VITE_API_PORT`) já estão configuradas no docker-compose.yml para apontar para o serviço `backend` (nome do container).
 - Para parar: `docker-compose down`
 - Para resetar dados do banco: `docker-compose down -v`
 
@@ -128,7 +129,29 @@ cd frontend
 npm install
 ```
 
-3. Inicie a aplicação:
+3. Crie o arquivo de ambiente a partir do modelo:
+
+```bash
+cp .env.example .env
+```
+
+> No Windows PowerShell, use:
+>
+> ```powershell
+> Copy-Item .env.example .env
+> ```
+
+4. (Opcional) Ajuste as variáveis em `frontend/.env` conforme necessário:
+
+```env
+VITE_API_HOST=localhost
+VITE_API_PORT=3000
+```
+
+- `VITE_API_HOST`: Endereço do backend (pode ser IP, domínio ou localhost)
+- `VITE_API_PORT`: Porta onde o backend está rodando
+
+5. Inicie a aplicação:
 
 ```bash
 npm run dev
