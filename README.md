@@ -6,7 +6,6 @@ Monorepo com backend em Node.js/Express e frontend em React + Vite.
 
 - `backend/` - API REST usando Express, Sequelize e MySQL
 - `frontend/` - Aplicação React usando Vite
-- `docs/` - Documentação e diagrama de implementação
 
 ## Tecnologias principais
 
