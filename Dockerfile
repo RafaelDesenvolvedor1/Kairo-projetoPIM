@@ -1,31 +1,22 @@
-# Use Ubuntu as base image
-FROM ubuntu:20.04
+FROM node:22-slim
 
-# Set environment variables to avoid interactive prompts
-ENV DEBIAN_FRONTEND=noninteractive
+# Instala dependências básicas do sistema
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
-# Update and install necessary packages
-RUN apt-get update && apt-get install -y \
-    curl \
-    gnupg \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install Node.js 22.x
-RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
-    && apt-get install -y nodejs
-
-# Set working directory
+# Define o diretório de trabalho no container
 WORKDIR /app
 
-# Copy backend package.json and install dependencies
-COPY backend/package.json backend/package-lock.json* ./
+# Copia os arquivos de dependência de dentro da pasta backend
+COPY backend/package*.json ./
+
+# Instala as dependências dentro do container
 RUN npm install
 
-# Copy backend source code
-COPY backend/ ./
+# Copia todo o conteúdo da pasta backend para o WORKDIR
+COPY backend/ . 
 
-# Expose port
+# Expõe a porta que a API utiliza
 EXPOSE 3000
 
-# Start the application
-CMD ["npm", "start"]
+# Comando para rodar com hot reload (nodemon)
+CMD ["npm", "run", "dev"]
