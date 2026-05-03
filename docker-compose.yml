@@ -21,6 +21,11 @@ services:
     build: .
     container_name: projeto-pim-backend
     restart: unless-stopped
+    volumes:
+      - ./backend:/app              # Sincroniza sua pasta backend local com o container
+      - /app/node_modules           # Protege os módulos instalados no container
+    working_dir: /app
+    command: npm run dev            # Executa o script de desenvolvimento
     environment:
       DB_HOST: mysql
       DB_PORT: 3306
@@ -41,12 +46,13 @@ services:
     restart: unless-stopped
     working_dir: /app
     volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - ./frontend:/app             # Sincroniza sua pasta frontend local
+      - /app/node_modules           # Protege os módulos do frontend
     environment:
       - VITE_API_PORT=3000
     ports:
       - "5173:5173"
+    # O --host garante que o Vite aceite conexões de fora do container
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
     depends_on:
       - backend
