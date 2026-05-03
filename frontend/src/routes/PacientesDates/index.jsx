@@ -8,6 +8,8 @@ import TabPerfil from './tabs/TabPerfil';
 import TabProntuario from './tabs/TabProntuario';
 import TabNotasSessao from './tabs/TabNotasSessao';
 import TabAgenda from './tabs/TabAgenda';
+import TabFinanceiro from './tabs/TabFinanceiro';
+
 
 export default () => {
   const location = useLocation();
@@ -29,7 +31,7 @@ export default () => {
     { key: '3', label: 'Prontuário', children: <TabProntuario /> },
     { key: '4', label: 'Anotações de Sessão', children: <TabNotasSessao /> },
     { key: '5', label: 'Agenda', children: <TabAgenda /> },
-    { key: '6', label: 'Financeiro', children: <div>Em breve</div> },
+    { key: '6', label: 'Financeiro', children: <TabFinanceiro /> },
     { key: '7', label: 'Diário de Bordo', children: <div>Em breve</div> },
     { key: '8', label: 'Documentos', children: <div>Em breve</div> },
     { key: '9', label: 'Anexos', children: <div>Em breve</div> },
