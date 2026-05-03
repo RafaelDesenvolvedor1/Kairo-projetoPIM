@@ -2,23 +2,22 @@ import styled from 'styled-components';
 
 export const SessionContainer = styled.div`
   display: grid;
-  grid-template-columns: 280px 1fr;
-  gap: 20px;
+  grid-template-columns: ${props => props.hideSidebar ? '0px 1fr' : '280px 1fr'};
+  gap: ${props => props.hideSidebar ? '0px' : '20px'};
   height: 100%;
   padding: 10px;
+  transition: all 0.3s ease;
 `;
 
 export const TimelineSidebar = styled.div`
   background: #fff;
-  border: 1px solid #f0f0f0;
+  border: ${props => props.hideSidebar ? 'none' : '1px solid #f0f0f0'};
   border-radius: 8px;
-  padding: 20px;
+  padding: ${props => props.hideSidebar ? '0px' : '20px'};
+  overflow: hidden;
   height: fit-content;
-
-  .ant-typography {
-    margin-bottom: 16px;
-    font-weight: 600;
-  }
+  opacity: ${props => props.hideSidebar ? 0 : 1};
+  transition: all 0.3s ease;
 `;
 
 export const ContentArea = styled.div`
@@ -41,27 +40,21 @@ export const AnnotationCard = styled.div`
   margin: 20px;
   border: 1px solid #f0f0f0;
   border-radius: 12px;
-  padding: 0;
   overflow: hidden;
 
-  .card-header {
-    background: #fff;
-    padding: 12px 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+  .ant-collapse {
+    background: transparent;
+    border: none;
   }
 
-  .card-body {
-    padding: 20px;
-    min-height: 300px;
-    background: #fff;
-    border-top: 1px solid #f0f0f0;
-    border-bottom: 1px solid #f0f0f0;
+  .ant-collapse-header {
+    align-items: center !important;
+    padding: 12px 20px !important;
   }
 
   .card-footer {
     padding: 12px 20px;
+    border-top: 1px solid #f0f0f0;
     display: flex;
     justify-content: space-between;
     align-items: center;
