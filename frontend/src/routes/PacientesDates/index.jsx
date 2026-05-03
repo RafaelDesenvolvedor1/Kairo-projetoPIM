@@ -7,6 +7,7 @@ import { useLocation } from 'react-router';
 import TabPerfil from './tabs/TabPerfil';
 import TabProntuario from './tabs/TabProntuario';
 import TabNotasSessao from './tabs/TabNotasSessao';
+import TabAgenda from './tabs/TabAgenda';
 
 export default () => {
   const location = useLocation();
@@ -27,7 +28,7 @@ export default () => {
     { key: '2', label: 'Instrumentos', children: <div>Em breve</div> },
     { key: '3', label: 'Prontuário', children: <TabProntuario /> },
     { key: '4', label: 'Anotações de Sessão', children: <TabNotasSessao /> },
-    { key: '5', label: 'Agenda', children: <div>Em breve</div> },
+    { key: '5', label: 'Agenda', children: <TabAgenda /> },
     { key: '6', label: 'Financeiro', children: <div>Em breve</div> },
     { key: '7', label: 'Diário de Bordo', children: <div>Em breve</div> },
     { key: '8', label: 'Documentos', children: <div>Em breve</div> },
