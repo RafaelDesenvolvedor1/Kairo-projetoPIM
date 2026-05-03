@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Typography, Space, Button, Tag, Divider, Tooltip, Modal } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Typography, Space, Button, Tag, Divider, Tooltip, Modal, Form, message } from 'antd';
 import { 
   EditOutlined, 
   CloudUploadOutlined, 
@@ -7,14 +7,13 @@ import {
   CheckCircleOutlined, 
   BoldOutlined, 
   ItalicOutlined, 
-  StrikethroughOutlined, 
-  UnorderedListOutlined, 
-  OrderedListOutlined,
   AlignLeftOutlined, 
   AlignCenterOutlined, 
   AlignRightOutlined,
   UndoOutlined, 
   RedoOutlined,
+  UnorderedListOutlined, 
+  OrderedListOutlined,
   SaveOutlined
 } from '@ant-design/icons';
 
@@ -81,6 +80,7 @@ const MenuBar = ({ editor }) => {
 export default function TabProntuario() {
   const [isEditing, setIsEditing] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [form] = Form.useForm(); // Hook do AntD Form
 
   const editor = useEditor({
     extensions: [
@@ -88,10 +88,18 @@ export default function TabProntuario() {
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
     ],
     content: '',
+    onUpdate: ({ editor }) => {
+      // Atualiza o valor do campo oculto do formulário sempre que o texto mudar
+      form.setFieldsValue({ conteudo: editor.getHTML() });
+    },
   });
 
-  const handleSave = () => {
-    // Aqui você enviaria o HTML para sua API: editor.getHTML()
+  const onFinish = (values) => {
+    // Aqui os dados já vêm formatados do formulário (AntD)
+    console.log('Dados para o Banco:', values);
+    
+    // Simulação de envio
+    message.success('Prontuário salvo com sucesso!');
     setIsEditing(false);
     setIsModalOpen(false);
   };
@@ -112,52 +120,72 @@ export default function TabProntuario() {
         </Space>
       </HeaderEditor>
 
-      {/* ÁREA DA ABA: A key dinâmica garante que o editor re-renderize ao fechar o modal */}
-      <div key={isModalOpen ? 'aba-off' : 'aba-on'}>
-        {isEditing ? (
-          <EditorWrapper>
+      <Form form={form} onFinish={onFinish} layout="vertical">
+        {/* Campo oculto para o AntD gerenciar o valor do Tiptap */}
+        <Form.Item name="conteudo" hidden>
+          <input />
+        </Form.Item>
+
+        <div key={isModalOpen ? 'aba-off' : 'aba-on'}>
+          {isEditing ? (
+            <EditorWrapper>
+              <MenuBar editor={editor} />
+              <EditorContent editor={editor} />
+              <div style={{ textAlign: 'right', padding: '10px' }}>
+                <Button 
+                  type="primary" 
+                  htmlType="submit" // Faz o botão disparar o onFinish do Form
+                  style={{ background: '#2e3192' }}
+                  icon={<SaveOutlined />}
+                >
+                  Salvar
+                </Button>
+              </div>
+            </EditorWrapper>
+          ) : (
+            <div 
+              style={{ border: '1px solid #f0f0f0', borderRadius: 8, padding: '30px', minHeight: '200px', cursor: 'pointer', background: '#fafafa' }}
+              onClick={() => setIsEditing(true)}
+            >
+              {editor && !editor.isEmpty ? (
+                <div dangerouslySetInnerHTML={{ __html: editor.getHTML() }} />
+              ) : (
+                <Text type="secondary">Clique aqui para começar a digitar no prontuário...</Text>
+              )}
+            </div>
+          )}
+        </div>
+
+        <Modal
+          key={isModalOpen ? 'modal-active' : 'modal-inactive'}
+          title="Escrita Focada"
+          open={isModalOpen}
+          onCancel={() => setIsModalOpen(false)}
+          width="100%"
+          centered
+          destroyOnClose={true}
+          styles={{ body: { height: 'calc(100vh - 120px)', padding: '24px' } }}
+          footer={[
+            <Button key="close" onClick={() => setIsModalOpen(false)}>Fechar sem salvar</Button>,
+            <Button 
+              key="save" 
+              type="primary" 
+              icon={<SaveOutlined />} 
+              onClick={() => form.submit()} // Dispara a submissão do formulário
+              style={{ background: '#2e3192' }}
+            >
+              Salvar Registro
+            </Button>
+          ]}
+        >
+          <EditorWrapper isFullScreen={true}>
             <MenuBar editor={editor} />
-            <EditorContent editor={editor} />
-            <div style={{ textAlign: 'right', padding: '10px' }}>
-              <Button type="primary" onClick={handleSave} style={{ background: '#2e3192' }}>Salvar</Button>
+            <div style={{ minHeight: '400px' }}>
+               <EditorContent editor={editor} />
             </div>
           </EditorWrapper>
-        ) : (
-          <div 
-            style={{ border: '1px solid #f0f0f0', borderRadius: 8, padding: '30px', minHeight: '200px', cursor: 'pointer', background: '#fafafa' }}
-            onClick={() => setIsEditing(true)}
-          >
-            {editor && !editor.isEmpty ? (
-              <div dangerouslySetInnerHTML={{ __html: editor.getHTML() }} />
-            ) : (
-              <Text type="secondary">Clique aqui para começar a digitar no prontuário...</Text>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* MODO EXPANDIDO: A key dinâmica garante que o editor apareça ao abrir */}
-      <Modal
-        key={isModalOpen ? 'modal-active' : 'modal-inactive'}
-        title="Escrita Focada"
-        open={isModalOpen}
-        onCancel={() => setIsModalOpen(false)}
-        width="100%"
-        centered
-        destroyOnClose={true}
-        styles={{ body: { height: 'calc(100vh - 120px)', padding: '24px' } }}
-        footer={[
-          <Button key="close" onClick={() => setIsModalOpen(false)}>Fechar sem salvar</Button>,
-          <Button key="save" type="primary" icon={<SaveOutlined />} onClick={handleSave} style={{ background: '#2e3192' }}>Salvar Registro</Button>
-        ]}
-      >
-        <EditorWrapper isFullScreen={true}>
-          <MenuBar editor={editor} />
-          <div style={{ minHeight: '400px' }}>
-             <EditorContent editor={editor} />
-          </div>
-        </EditorWrapper>
-      </Modal>
+        </Modal>
+      </Form>
     </ProntuarioContainer>
   );
 }
