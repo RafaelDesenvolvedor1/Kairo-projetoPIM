@@ -60,3 +60,30 @@ export const AnnotationCard = styled.div`
     align-items: center;
   }
 `;
+
+// O componente que estava faltando:
+export const EditorWrapper = styled.div`
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  overflow: hidden;
+
+  .ProseMirror {
+    min-height: ${props => props.isFullScreen ? 'calc(100vh - 250px)' : '200px'};
+    padding: 20px;
+    outline: none;
+
+    p.is-editor-empty:first-child::before {
+      content: attr(data-placeholder);
+      float: left;
+      color: #adb5bd;
+      pointer-events: none;
+      height: 0;
+    }
+  }
+
+  .toolbar {
+    background: #fafafa;
+    border-bottom: 1px solid #f0f0f0;
+    padding: 8px;
+  }
+`;
