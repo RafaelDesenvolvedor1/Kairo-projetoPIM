@@ -6,6 +6,7 @@ import { useLocation } from 'react-router';
 // Importação dos sub-componentes (sessões)
 import TabPerfil from './tabs/TabPerfil';
 import TabProntuario from './tabs/TabProntuario';
+import TabNotasSessao from './tabs/TabNotasSessao';
 
 export default () => {
   const location = useLocation();
@@ -25,7 +26,7 @@ export default () => {
     { key: '1', label: 'Perfil', children: <TabPerfil /> },
     { key: '2', label: 'Instrumentos', children: <div>Em breve</div> },
     { key: '3', label: 'Prontuário', children: <TabProntuario /> },
-    { key: '4', label: 'Anotações de Sessão', children: <div>Em breve</div> },
+    { key: '4', label: 'Anotações de Sessão', children: <TabNotasSessao /> },
     { key: '5', label: 'Agenda', children: <div>Em breve</div> },
     { key: '6', label: 'Financeiro', children: <div>Em breve</div> },
     { key: '7', label: 'Diário de Bordo', children: <div>Em breve</div> },
