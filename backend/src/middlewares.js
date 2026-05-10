@@ -5,6 +5,7 @@ module.exports = (app) => {
   app.set("port", process.env.PORT || 3000);
   app.set("json spaces", 4);
   app.use(bodyParser.json());
+  app.use(app.auth.initialize());
   app.use(cors({
       origin: '*', // Permite requisições de qualquer lugar (Windows, Linux, Celular)
       methods: ['GET', 'POST', 'PUT', 'DELETE'],

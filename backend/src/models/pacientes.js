@@ -31,8 +31,16 @@ module.exports = (app) => {
     },
     {
       tableName: "pacientes",
+      timestamps: false, // Mantendo o padrão das outras sem timestamps automáticos do Sequelize
     }
   );
+
+  Pacientes.associate = (models) => {
+    // Chave estrangeira nas tabelas filhas aponta para o seu 'id' atual
+    Pacientes.hasMany(models.Agendamentos, { foreignKey: 'id_paciente', as: 'agendamentos' });
+    Pacientes.hasMany(models.Relatorios, { foreignKey: 'id_paciente', as: 'relatorios' });
+    Pacientes.hasMany(models.Fichas_Clinicas, { foreignKey: 'id_paciente', as: 'fichas_clinicas' });
+  };
 
   return Pacientes;
 };

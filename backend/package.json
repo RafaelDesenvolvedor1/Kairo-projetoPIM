@@ -12,12 +12,16 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "body-parser": "^2.2.1",
     "consign": "^0.1.6",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
+    "jwt-simple": "^0.5.6",
     "mysql2": "^3.15.3",
+    "passport": "^0.7.0",
+    "passport-jwt": "^4.0.1",
     "sequelize": "^6.37.7"
   },
   "devDependencies": {

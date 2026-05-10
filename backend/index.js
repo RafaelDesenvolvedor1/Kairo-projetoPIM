@@ -7,6 +7,7 @@ const app = express();
 consign({cwd: 'src'})
     .include('db.js')
     .then('models')
+    .then('auth.js')
     .then('middlewares.js')
     .then('routes')
     .then('boot.js')

@@ -12,4 +12,8 @@ module.exports = {
       },
     },
   },
+  jwt: {
+    secret: 'secret-key',
+    options: { session: false }
+  },
 };
