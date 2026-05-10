@@ -13,7 +13,7 @@ module.exports = {
     },
   },
   jwt: {
-    secret: 'secret-key',
+    secret: process.env.JWT_SECRET || 'secret-key',
     options: { session: false }
   },
 };

@@ -9,18 +9,25 @@ module.exports = (app) => {
     app.post('/token', async (req, res) => {
         try {
             const { email, senha } = req.body;
-            if (email && senha) {
-                const where = { email };
-                const user = await Users.findOne({ where });
-                if(bcrypt.compareSync(senha, user.senha_hash)) {
-                    const payload = { id_usuario: user.id_usuario };
-                    const token = jwt.encode(payload, secret);
-                    return res.json({ token });
-                }
+            if (!email || !senha) {
+                return res.status(400).json({ message: 'Email e senha são obrigatórios' });
             }
-            return res.sendStatus(401);
+            const user = await Users.findOne({ where: { email } });
+            if(!user) {
+                return res.status(401).json({ message: 'Credenciais inválidas' });
+            }
+            if (bcrypt.compareSync(senha, user.senha_hash)) {
+                const now = Math.floor(Date.now() / 1000);
+                const payload = {
+                    id_usuario: user.id_usuario,
+                    exp: now + (24 * 60 * 60)
+                };
+                const token = jwt.encode(payload, secret);
+                return res.json({ token });
+            }
+            return res.status(401).json({ message: 'Credenciais inválidas' });
         } catch (error) {
-            return res.sendStatus(401);
+            return res.status(500).json({ message: 'Erro interno no login' });
         }
     });
 };

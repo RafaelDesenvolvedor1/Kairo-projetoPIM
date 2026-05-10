@@ -1,7 +1,7 @@
 FROM node:22-slim
 
 # Instala dependências básicas do sistema
-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y curl build-essential python3 && rm -rf /var/lib/apt/lists/*
 
 # Define o diretório de trabalho no container
 WORKDIR /app

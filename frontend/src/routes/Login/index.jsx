@@ -1,16 +1,34 @@
 import React from "react";
 import { Layout, Card, Form, Input, Button, Checkbox, Typography } from "antd";
 import { UserOutlined, LockOutlined, MailOutlined } from "@ant-design/icons";
-import ButtonPrimary from "../../components/ButtonPrimary";
+import ButtonSubmit from "../../components/ButtonSubmit";
 import ButtonSecoundary from "../../components/ButtonSecoundary";
+import { useNavigate, Link } from "react-router";
+import authService from "../../services/authService";
+import { useMessage } from "../../context/MessageProvider";
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
-import { Link } from "react-router";
 
 export default () => {
-  const onFinish = (values) => {
-    console.log("Login:", values);
+  const navigate = useNavigate();
+  const messageApi = useMessage();
+
+  const onFinish = async (values) => {
+    try {
+      const result = await authService.login(values.email, values.password);
+      if (result && result.success) {
+        messageApi.success('Login realizado com sucesso!');
+        navigate('/');
+      } else if (result && result.message) {
+        messageApi.error(result.message);
+      } else {
+        messageApi.error('Erro ao realizar login');
+      }
+    } catch (error) {
+      console.error('Erro inesperado:', error);
+      messageApi.error('Erro inesperado ao realizar login');
+    }
   };
 
   return (
@@ -101,9 +119,9 @@ export default () => {
                 <Link>Esqueci a senha</Link>
               </div>
 
-              <ButtonPrimary block>
+              <ButtonSubmit block>
                 Entrar
-              </ButtonPrimary>
+              </ButtonSubmit>
             </Form>
           </Card>
         </div>

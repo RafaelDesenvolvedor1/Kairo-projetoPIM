@@ -32,7 +32,17 @@ module.exports = (app) => {
         
     app.post('/users', async (req, res) => {
         try {
-            const result = await Users.create(req.body);
+            const { nome, email, senha_hash, tipo_usuario, ativo } = req.body;
+            if (!nome || !email || !senha_hash) {
+                return res.status(400).json({ msg: 'Nome, email e senha são obrigatórios' });
+            }
+            const result = await Users.create({
+                nome,
+                email,
+                senha_hash,
+                tipo_usuario: tipo_usuario || 'paciente',
+                ativo: ativo !== undefined ? ativo : true,
+            });
             res.json(result);
         } catch (error) {
             res.status(412).json({ msg: error.message });

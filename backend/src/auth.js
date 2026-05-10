@@ -7,15 +7,18 @@ module.exports = (app) => {
     
     const params = {
         secretOrKey: config.jwt.secret,
-        jwtFromRequest: ExtractJwt.fromHeader('Authorization'),
+        jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
     };
 
     passport.use(new Strategy(params, async (payload, done) => {
         try {
-            const { id } = payload;
-            const attributes = ['id', 'email'];
+            const { id_usuario } = payload;
+            if (!id_usuario) {
+                return done(null, false);
+            }
+            const attributes = ['id_usuario', 'email'];
             const options = { attributes };
-            const user = await User.findByPk(id, options);
+            const user = await User.findByPk(id_usuario, options);
             done(null, user);
         } catch (error) {
             done(error, null);
@@ -24,6 +27,6 @@ module.exports = (app) => {
 
     return {
         initialize: () => passport.initialize(),
-        authenticate: () => passport.authenticate('jwt', jwt.options),
+        authenticate: () => passport.authenticate('jwt', { session: false }),
     }
-}
+};

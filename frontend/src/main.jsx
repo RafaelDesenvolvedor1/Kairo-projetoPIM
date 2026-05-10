@@ -19,12 +19,14 @@ import Locais from "./routes/Locais/index.jsx";
 import Servicos from "./routes/Servicos/index.jsx";
 import Horarios from "./routes/Horarios/index.jsx";
 import PacientesDates from "./routes/PacientesDates/index.jsx";
+import ProtectedRoute from "./components/ProtectedRoute/index.jsx";
+import { MessageProvider } from "./context/MessageProvider";
 
 const router = createBrowserRouter(
   [
     {
       path: "/",
-      element: <App />,
+      element: <ProtectedRoute><App /></ProtectedRoute>,
       children: [
         {
           path: "/",
@@ -87,7 +89,9 @@ createRoot(document.getElementById("root")).render(
         },
       },
     }}>
-      <RouterProvider router={router} />
+      <MessageProvider>
+        <RouterProvider router={router} />
+      </MessageProvider>
     </ConfigProvider>
   </StrictMode>
 );

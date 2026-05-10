@@ -1,11 +1,38 @@
 import axios from "axios";
+import authService from "../services/authService.js";
 
-const host = window.location.hostname;
-const port = import.meta.env.VITE_API_PORT || "3000";
+const API_BASE_URL = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:${import.meta.env.VITE_API_PORT || "3000"}`;
 
 const api = axios.create({
-  baseURL: `http://${host}:${port}`
+  baseURL: API_BASE_URL
 });
+
+// Interceptor para adicionar token de autenticação
+api.interceptors.request.use(
+  (config) => {
+    const token = authService.getToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Interceptor para lidar com erros de autenticação
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Token inválido ou expirado, redirecionar para login
+      authService.logout();
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
 
 export const getPacientes = async () => {
   try {

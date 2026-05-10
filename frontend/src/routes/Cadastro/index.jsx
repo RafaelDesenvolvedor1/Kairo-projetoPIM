@@ -13,15 +13,38 @@ import {
   LockOutlined,
 } from "@ant-design/icons";
 import ButtonSecoundary from "../../components/ButtonSecoundary";
-import { Link } from "react-router";
-import ButtonPrimary from "../../components/ButtonPrimary";
+import { Link, useNavigate } from "react-router";
+import ButtonSubmit from "../../components/ButtonSubmit";
+import authService from "../../services/authService";
+import { useMessage } from "../../context/MessageProvider";
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
 
 export default function Register() {
-  const onFinish = (values) => {
-    console.log("Cadastro:", values);
+  const navigate = useNavigate();
+  const messageApi = useMessage();
+
+  const onFinish = async (values) => {
+    try {
+      if (values.password !== values['confirm-password']) {
+        messageApi.error('As senhas não coincidem');
+        return;
+      }
+
+      const result = await authService.register(values.name, values.email, values.password);
+      if (result && result.success) {
+        messageApi.success('Cadastro realizado com sucesso! Faça login para continuar.');
+        navigate('/login');
+      } else if (result && result.message) {
+        messageApi.error(result.message);
+      } else {
+        messageApi.error('Erro ao realizar cadastro');
+      }
+    } catch (error) {
+      console.error('Erro inesperado:', error);
+      messageApi.error('Erro inesperado ao realizar cadastro');
+    }
   };
 
   return (
@@ -122,9 +145,9 @@ export default function Register() {
                 />
               </Form.Item>
 
-              <ButtonPrimary block>
+              <ButtonSubmit block>
                 Cadastrar
-              </ButtonPrimary>
+              </ButtonSubmit>
             </Form>
           </Card>
         </div>
