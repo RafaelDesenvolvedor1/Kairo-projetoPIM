@@ -28,6 +28,10 @@ module.exports = (app) => {
           notEmpty: true,
         },
       },
+      id_usuario: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+      },
     },
     {
       tableName: "pacientes",
@@ -36,7 +40,7 @@ module.exports = (app) => {
   );
 
   Pacientes.associate = (models) => {
-    // Chave estrangeira nas tabelas filhas aponta para o seu 'id' atual
+    Pacientes.belongsTo(models.User, { foreignKey: 'id_usuario', as: 'usuario' });
     Pacientes.hasMany(models.Agendamentos, { foreignKey: 'id_paciente', as: 'agendamentos' });
     Pacientes.hasMany(models.Relatorios, { foreignKey: 'id_paciente', as: 'relatorios' });
     Pacientes.hasMany(models.Fichas_Clinicas, { foreignKey: 'id_paciente', as: 'fichas_clinicas' });

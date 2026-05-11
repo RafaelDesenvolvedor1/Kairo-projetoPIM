@@ -3,7 +3,7 @@ module.exports = (app) => {
     try {
       try {
         await app.db.authenticate();
-        await app.db.sync();
+        await app.db.sync({ alter: true });
         console.log("Conexão com banco de dados estabelecida com sucesso!");
       } catch (err) {
         console.log("Erro na conexão com o banco de dados!");

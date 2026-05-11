@@ -62,6 +62,18 @@ const authService = {
     } catch (e) {
       return false;
     }
+  },
+
+  // Get current user info from token
+  getCurrentUser() {
+    const token = this.getToken();
+    if (!token) return null;
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload;
+    } catch (e) {
+      return null;
+    }
   }
 };
 

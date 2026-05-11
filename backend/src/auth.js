@@ -1,8 +1,11 @@
 const passport = require('passport');
 const { ExtractJwt, Strategy } = require('passport-jwt');
 const config = require('./config/config.js');
+const associateModels = require('../associate');
 
 module.exports = (app) => {
+    associateModels(app);
+
     const User = app.db.models.User;
     
     const params = {

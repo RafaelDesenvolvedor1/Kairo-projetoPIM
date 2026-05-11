@@ -20,6 +20,7 @@ module.exports = (app) => {
                 const now = Math.floor(Date.now() / 1000);
                 const payload = {
                     id_usuario: user.id_usuario,
+                    nome: user.nome,
                     exp: now + (24 * 60 * 60)
                 };
                 const token = jwt.encode(payload, secret);

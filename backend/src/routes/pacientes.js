@@ -9,7 +9,7 @@ module.exports = (app) => {
     .get(async (req, res) => {
       // Listar apenas os pacientes do usuário autenticado
       try {
-        const where = { userId: req.user.id_usuario };
+        const where = { id_usuario: req.user.id_usuario };
         const result = await Pacientes.findAll({ where });
         res.json(result);
       } catch (err) {
@@ -19,7 +19,7 @@ module.exports = (app) => {
     .post(async (req, res) => {
       // Cadastra um paciente associado ao usuário autenticado
       try {
-        req.body.userId = req.user.id_usuario; 
+        req.body.id_usuario = req.user.id_usuario;
         const result = await Pacientes.create(req.body);
         res.json(result);
       } catch (err) {
@@ -34,9 +34,9 @@ module.exports = (app) => {
     .get(async (req, res) => {
       try {
         // Filtra para contar apenas os pacientes do próprio usuário
-        const where = { userId: req.user.id_usuario };
-        const result = await Pacientes.count({ where });
-        res.json({ qtd_pacientes: result });
+        const where = { id_usuario: req.user.id_usuario };
+        const count = await Pacientes.count({ where });
+        res.json({ count });
       } catch (err) {
         res.status(412).json({ msg: err.message });
       }
@@ -50,8 +50,8 @@ module.exports = (app) => {
       try {
         const { nome } = req.params; // Corrigido de nomePacientes para nome
         const where = { 
-          nome: nome,
-          userId: req.user.id_usuario // Garante que pertence ao usuário logado
+          nomePaciente: nome,
+          id_usuario: req.user.id_usuario // Garante que pertence ao usuário logado
         };
         const result = await Pacientes.findOne({ where });
         if (result) {
@@ -77,8 +77,8 @@ module.exports = (app) => {
         
         const result = await Pacientes.findAll({
           where: {
-            userId: req.user.id_usuario, // Garante que a busca só traga registros do usuário
-            nome: {
+            id_usuario: req.user.id_usuario, // Garante que a busca só traga registros do usuário
+            nomePaciente: {
               [Op.like]: `%${searchNome}%`,
             },
           },
@@ -98,7 +98,7 @@ module.exports = (app) => {
         const { id } = req.params;
         const where = { 
           id, 
-          userId: req.user.id_usuario 
+          id_usuario: req.user.id_usuario 
         };
         const result = await Pacientes.findOne({ where });
         if (result) {
@@ -116,11 +116,11 @@ module.exports = (app) => {
         const { id } = req.params;
         const where = { 
           id, 
-          userId: req.user.id_usuario 
+          id_usuario: req.user.id_usuario 
         };
         
         // Impede que o usuário tente alterar o dono do paciente no corpo da requisição
-        delete req.body.userId; 
+        delete req.body.id_usuario; 
 
         const [updatedRows] = await Pacientes.update(req.body, { where });
         
@@ -139,7 +139,7 @@ module.exports = (app) => {
         const { id } = req.params;
         const where = { 
           id, 
-          userId: req.user.id_usuario 
+          id_usuario: req.user.id_usuario 
         };
         const deletedRows = await Pacientes.destroy({ where });
         

@@ -71,8 +71,7 @@ module.exports = (app) => {
         Users.hasMany(models.Relatorios, { foreignKey: 'id_usuario', as: 'relatorios' });
         Users.hasMany(models.Fichas_Clinicas, { foreignKey: 'id_usuario', as: 'fichas_clinicas' });
         Users.hasMany(models.Agendamentos, { foreignKey: 'id_usuario', as: 'agendamentos' });
-        
-        Users.hasOne(models.Pacientes, { foreignKey: 'id_usuario', as: 'paciente_perfil' });
+        Users.hasMany(models.Pacientes, { foreignKey: 'id_usuario', as: 'pacientes' });
         Users.hasOne(models.Equipe, { foreignKey: 'id_usuario', as: 'equipe_perfil' });
     };
 
