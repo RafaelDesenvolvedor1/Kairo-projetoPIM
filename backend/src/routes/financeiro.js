@@ -257,25 +257,77 @@ module.exports = (app) => {
    * GET /lancamentos/:id - Buscar lançamento específico
    */
   app
-    .route('/lancamentos/:id')
+    .route('/lancamentos')
     .all(app.auth.authenticate())
     .get(async (req, res) => {
       try {
         const id_usuario = req.user.id_usuario;
-        const { id } = req.params;
+        const { mes } = req.query;
 
-        const lancamento = await Lancamento.findOne({
-          where: { id_lancamento: id, id_usuario },
-          include: [
-            { model: Pacientes, as: 'paciente', required: false },
-            { model: Parcelalancamento, as: 'parcelas', required: false },
-          ],
-        });
+        const where = { id_usuario };
 
-        if (!lancamento) return res.sendStatus(404);
-        return res.json(lancamento);
+        if (mes && /^\d{4}-\d{2}$/.test(mes)) {
+          const [ano, mês] = mes.split('-');
+          const dataInicio = `${ano}-${mês}-01`;
+          const dataFim = new Date(ano, mês, 0).toISOString().split('T')[0];
+          where.data_lancamento = {
+            [Op.between]: [dataInicio, dataFim],
+          };
+        }
+
+        if (!Lancamento) {
+          return res.status(500).json({ msg: "Model de Lançamento não carregado." });
+        }
+
+        // Tenta buscar trazendo as tabelas relacionadas com os codinomes exatos do Sequelize
+        try {
+          const result = await Lancamento.findAll({
+            where,
+            include: [
+              {
+                model: Pacientes,
+                as: 'paciente',
+                attributes: ['id', 'nomePaciente', 'email', 'telefone'],
+                required: false
+              },
+              {
+                model: Parcelalancamento,
+                as: 'parcelas',
+                attributes: ['id_parcela', 'numero_parcela', 'data_vencimento', 'valor_parcela', 'status'],
+                required: false
+              },
+            ],
+            order: [['data_lancamento', 'DESC']],
+          });
+          
+          return res.json(result || []);
+
+        } catch (assocError) {
+          console.warn("⚠️ Código de contingência ativado. Tentando variação de codinome de associação para o model Pacientes:", assocError.message);
+          
+          // Fallback inteligente caso o Sequelize prefira a busca direta baseada em Strings ou chaves implícitas
+          const fallbackResult = await Lancamento.findAll({
+            where,
+            include: [
+              {
+                association: 'paciente',
+                attributes: ['id', 'nomePaciente'],
+                required: false
+              },
+              {
+                association: 'parcelas',
+                required: false
+              }
+            ],
+            order: [['data_lancamento', 'DESC']],
+          });
+          
+          return res.json(fallbackResult || []);
+        }
+
       } catch (err) {
-        return handleError(res, err);
+        console.error("Erro fatal ao buscar lançamentos:", err);
+        return res.status(500).json({ msg: err.message, data: [] });
       }
     });
 

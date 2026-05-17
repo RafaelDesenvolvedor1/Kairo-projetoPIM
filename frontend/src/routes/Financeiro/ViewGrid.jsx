@@ -48,9 +48,20 @@ export default function ViewGrid({
               <p className="descricao">{lancamento.descricao}</p>
             )}
 
-            {lancamento.paciente && (
+            {(
+              lancamento.paciente?.nomePaciente ||
+              lancamento.Paciente?.nomePaciente ||
+              lancamento.pacientes?.nomePaciente ||
+              lancamento.paciente_nome
+            ) && (
               <p className="paciente">
-                <strong>Paciente:</strong> {lancamento.paciente.nomePaciente}
+                <strong>Paciente:</strong>{" "}
+                {
+                  lancamento.paciente?.nomePaciente ||
+                  lancamento.Paciente?.nomePaciente ||
+                  lancamento.pacientes?.nomePaciente ||
+                  lancamento.paciente_nome
+                }
               </p>
             )}
 

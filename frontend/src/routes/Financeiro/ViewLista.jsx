@@ -19,17 +19,21 @@ export default function ViewLista({
     },
     {
       title: "Paciente",
-      dataIndex: ["paciente", "nomePaciente"],
       key: "paciente",
       width: "20%",
-      render: (text) => text || "—",
+      render: (_, record) =>
+        record.paciente?.nomePaciente ||
+        record.Paciente?.nomePaciente ||
+        record.pacientes?.nomePaciente ||
+        record.paciente_nome ||
+        "—",
     },
     {
       title: "Descrição",
       dataIndex: "descricao",
       key: "descricao",
       width: "22%",
-      render: (text) => text || "—",
+      render: (descricao) => descricao || "—",
     },
     {
       title: "Tipo",
