@@ -54,6 +54,7 @@ export default function Financeiro() {
   const [prestacoes, setPrestacoes] = useState([
     { data_vencimento: null, valor_parcela: 0 },
   ]);
+  const [selectedPacienteId, setSelectedPacienteId] = useState(null);
 
   const categoriasMap = {
     RECEITA: ["Receita atendimento", "Receita produto", "Receita outros"],
@@ -253,6 +254,19 @@ export default function Financeiro() {
     form.resetFields();
   };
 
+  const handlePacienteClick = (id) => {
+    setSelectedPacienteId(id);
+    setView("lista");
+  };
+
+  const handleClearPacienteFilter = () => {
+    setSelectedPacienteId(null);
+  };
+
+  const filteredLancamentos = selectedPacienteId
+    ? lancamentos.filter((l) => l.id_paciente === selectedPacienteId)
+    : lancamentos;
+
   return (
     <Space direction="vertical" style={{ width: "100%", padding: "0 20px" }}>
       {/* Cards de Consolidação */}
@@ -309,7 +323,12 @@ export default function Financeiro() {
       <Space direction="horizontal" style={{ width: "100%", justifyContent: "space-between" }}>
         <Segmented
           value={view}
-          onChange={setView}
+          onChange={(value) => {
+            setView(value);
+            if (value === "pacientes") {
+              handleClearPacienteFilter();
+            }
+          }}
           options={[
             { label: "Pacientes", value: "pacientes" },
             { label: "Lista", value: "lista" },
@@ -345,13 +364,13 @@ export default function Financeiro() {
               lancamentos={lancamentos}
               pacientes={pacientes}
               loading={loading}
-              onPacienteClick={(id) => setView("lista")}
+              onPacienteClick={handlePacienteClick}
             />
           )}
 
           {view === "lista" && (
             <ViewLista
-              lancamentos={lancamentos}
+              lancamentos={filteredLancamentos}
               loading={loading}
               onEditar={handleEditarLancamento}
               onDeletar={handleDeletarLancamento}
@@ -360,7 +379,7 @@ export default function Financeiro() {
 
           {view === "grid" && (
             <ViewGrid
-              lancamentos={lancamentos}
+              lancamentos={filteredLancamentos}
               loading={loading}
               onEditar={handleEditarLancamento}
               onDeletar={handleDeletarLancamento}
