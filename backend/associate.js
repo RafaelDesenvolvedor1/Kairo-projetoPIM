@@ -12,6 +12,8 @@ module.exports = (app) => {
     anexos: Anexos,
     fichasClinicas: Fichas_Clinicas,
     financeiro: Financeiro,
+    lancamento: Lancamento,
+    parcelalancamento: Parcelalancamento,
     logsAcesso: Logs_Acesso,
     equipe: Equipe,
   } = models;
@@ -105,6 +107,24 @@ module.exports = (app) => {
 
   if (Financeiro) {
     Financeiro.belongsTo(Users, { foreignKey: 'id_usuario', as: 'usuario' });
+  }
+
+  if (Lancamento) {
+    if (Users) {
+      Lancamento.belongsTo(Users, { foreignKey: 'id_usuario', as: 'usuario' });
+    }
+    if (Pacientes) {
+      Lancamento.belongsTo(Pacientes, { foreignKey: 'id_paciente', as: 'paciente' });
+    }
+    if (Parcelalancamento) {
+      Lancamento.hasMany(Parcelalancamento, { foreignKey: 'id_lancamento', as: 'parcelas' });
+    }
+  }
+
+  if (Parcelalancamento) {
+    if (Lancamento) {
+      Parcelalancamento.belongsTo(Lancamento, { foreignKey: 'id_lancamento', as: 'lancamento' });
+    }
   }
 
   if (Logs_Acesso) {

@@ -1,188 +1,266 @@
-import { Flex, Form, Input, Space, Select, Switch, DatePicker } from "antd";
-import { useState } from "react";
+import { Flex, Form, Space, Segmented, message } from "antd";
+import { useState, useEffect } from "react";
 import { useMessage } from "../../context/MessageProvider";
 import { Container, ContainerHorizontal } from "./styles";
 import ButtonSecoundary from "../../components/ButtonSecoundary";
-
-// icons
-import { CheckCircleOutlined, ClockCircleOutlined, DollarOutlined, DownloadOutlined, FallOutlined, FilterFilled, UserAddOutlined, CalendarOutlined } from "@ant-design/icons";
-
 import EmptyComponent from "../../components/EmptyComponent";
 import MyDrawer from "../../components/MyDrawer";
-import ButtonSubmit from '../../components/ButtonSubmit';
-import ButtonWhatsapp from '../../components/ButtonWhatsapp';
 import CardFinancas from "../../components/CardFinancas";
-import { Link } from "react-router";
+import FormNovoLancamento from "../../components/FormNovoLancamento";
+import CardPeriodo from "../../components/CardPeriodo";
+import ViewPacientes from "./ViewPacientes";
+import ViewLista from "./ViewLista";
+import ViewGrid from "./ViewGrid";
+
+// icons
+import {
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  DollarOutlined,
+  DownloadOutlined,
+  FallOutlined,
+  FilterFilled,
+  UserAddOutlined,
+} from "@ant-design/icons";
+
+import financeirosService from "../../services/financeirosService";
+import dayjs from "dayjs";
 
 export default function Financeiro() {
-    const [form] = Form.useForm();
-    const [open, setOpen] = useState(false);
+  const [form] = Form.useForm();
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [view, setView] = useState("lista"); // "pacientes", "lista", "grid"
+  const messageApi = useMessage();
 
-    // useMessage para exibir mensagens de feedback
-    const messageApi = useMessage();
-    const key = "updatable";
+  // Estado do período
+  const [periodo, setPeriodo] = useState(dayjs().format("YYYY-MM"));
 
-    const openMessage = (type, content) => {
-        messageApi.open({
-            key,
-            type,
-            content,
-            duration: 2,
-        });
-    };
+  // Dados
+  const [lancamentos, setLancamentos] = useState([]);
+  const [pacientes, setPacientes] = useState([]);
+  const [consolidado, setConsolidado] = useState({
+    despesasAPagar: 0,
+    receitasPrevistas: 0,
+    receitasRealizadas: 0,
+    despesasRealizadas: 0,
+  });
 
+  // Carregar dados iniciais
+  useEffect(() => {
+    carregarPacientes();
+    carregarLancamentos();
+    carregarConsolidado();
+  }, []);
 
-    const [isListEmpty, setIsListEmpty] = useState(0);
+  // Recarregar lançamentos quando período muda
+  useEffect(() => {
+    carregarLancamentos();
+    carregarConsolidado();
+  }, [periodo]);
 
-    const showDrawer = () => {
-        setOpen(true);
-    };
-    const onClose = () => {
-        setOpen(false);
-    };
-    return (
-        <Space direction="vertical" style={{ width: "100%" }}>
-            <Space direction="horizontal" style={{ width: "100%", overflowX: 'auto' }}>
-                <CardFinancas
-                    color='#D35050'
-                    title="Despesas"
-                    desc="Valor á pagar"
-                    valor="0,00"
-                    icon={<FallOutlined />}
-                />
-                <CardFinancas
-                    color='#62AA85'
-                    title="Receitas"
-                    desc="Previstas"
-                    valor="0,00"
-                    icon={<ClockCircleOutlined />}
+  const carregarPacientes = async () => {
+    const resultado = await financeirosService.getPacientes();
+    if (resultado.success) {
+      setPacientes(resultado.data);
+    } else {
+      messageApi.error(resultado.message);
+    }
+  };
 
-                />
-                <CardFinancas
-                    color='#62AA85'
-                    title="Receitas"
-                    desc="Cobranças pagas"
-                    valor="0,00"
-                    icon={<DollarOutlined />}
-                />
-                <CardFinancas
-                    color='#62AA85'
-                    title="Receitas"
-                    desc="Realizadas"
-                    valor="0,00"
-                    icon={<CheckCircleOutlined />}
-                />
-            </Space>
-            <ContainerHorizontal direction="horizontal">
-                <ButtonSecoundary icon={<FilterFilled />}>Filtro</ButtonSecoundary>
-                <ButtonSecoundary icon={<DownloadOutlined />}>Baixar CSV</ButtonSecoundary>
-            </ContainerHorizontal>
-            <Container>
-                <EmptyComponent
-                    // image={<FiUserPlus size={48} />}
-                    description="Você ainda não criou nenhum lançamento"
-                    btnText="Novo lançamento"
-                    open={open}
-                    onClose={onClose}
-                    showDrawer={showDrawer}
-                />
-            </Container>
-            <MyDrawer open={open} onClose={onClose} title=" Cadastro de Paciente">
-                <Form
-                    form={form}
-                    layout="vertical"
-                    variant="underlined"
-                    onFinish={() => {}}
-                    initialValues={{ modalidade: 'À vista' }}
-                    style={{ padding: '20px' }}
-                >
-                    {/* Selecionar Cliente */}
-                    <Form.Item
-                        label="Selecionar cliente"
-                        name="cliente"
-                        rules={[{ message: "Por favor, selecione um cliente" }]}
-                    >
-                        <Select
-                            placeholder="Selecionar cliente"
-                            suffixIcon={(<Link to='/pacientes'><UserAddOutlined title="Cadastrar um Paciente" style={{color: '#000'}}/></Link>)}
-                            allowClear
-                        >
-                            <Select.Option value="cliente1">Cliente Exemplo 1</Select.Option>
-                        </Select>
-                    </Form.Item>
+  const carregarLancamentos = async () => {
+    setLoading(true);
+    const resultado = await financeirosService.getLancamentos(periodo);
+    if (resultado.success) {
+      setLancamentos(resultado.data);
+    } else {
+      messageApi.error(resultado.message);
+    }
+    setLoading(false);
+  };
 
-                    {/* Descrição */}
-                    <Form.Item label="Descrição" name="descricao">
-                        <Input placeholder="Descrição" />
-                    </Form.Item>
+  const carregarConsolidado = async () => {
+    const resultado = await financeirosService.getConsolidado(periodo);
+    if (resultado.success) {
+      setConsolidado(resultado.data);
+    } else {
+      messageApi.error(resultado.message);
+    }
+  };
 
-                    {/* Observações */}
-                    <Form.Item label="Observações" name="observacoes">
-                        <Input placeholder="Observações" />
-                    </Form.Item>
+  const handleNovoLancamento = async (valores) => {
+    setLoading(true);
+    const resultado = await financeirosService.createLancamento(valores);
+    if (resultado.success) {
+      messageApi.success("Lançamento criado com sucesso!");
+      form.resetFields();
+      setOpen(false);
+      carregarLancamentos();
+      carregarConsolidado();
+    } else {
+      messageApi.error(resultado.message);
+    }
+    setLoading(false);
+  };
 
-                    {/* Tipo e Categoria em Linha (Opcional, ou manter vertical como no print) */}
-                    <Form.Item label="Tipo" name="tipo">
-                        <Select placeholder="Select...">
-                            <Select.Option value="receita">Receita</Select.Option>
-                            <Select.Option value="despesa">Despesa</Select.Option>
-                        </Select>
-                    </Form.Item>
+  const handleDeletarLancamento = async (id) => {
+    if (confirm("Tem certeza que deseja deletar este lançamento?")) {
+      const resultado = await financeirosService.deleteLancamento(id);
+      if (resultado.success) {
+        messageApi.success("Lançamento deletado com sucesso!");
+        carregarLancamentos();
+        carregarConsolidado();
+      } else {
+        messageApi.error(resultado.message);
+      }
+    }
+  };
 
-                    <Form.Item label="Categoria" name="categoria">
-                        <Select placeholder="Select...">
-                            <Select.Option value="receita_atendimento">Receita de atendimento</Select.Option>
-                            <Select.Option value="receita_produto">Receita produto</Select.Option>
-                            <Select.Option value="receita_outros">Receita outros</Select.Option>
-                            {/* despesas */}
-                            <Select.Option value="despesa_fixa">Despesa Fixa</Select.Option>
-                            <Select.Option value="despesa_prestacoes">Despesa em prestações</Select.Option>
+  const handleEditarLancamento = (lancamento) => {
+    console.log("Editar:", lancamento);
+    messageApi.info("Edição ainda não implementada");
+  };
 
+  const showDrawer = () => {
+    setOpen(true);
+  };
 
-                        </Select>
-                    </Form.Item>
+  const onClose = () => {
+    setOpen(false);
+    form.resetFields();
+  };
 
-                    <Form.Item label="Forma de pagamento" name="formaPagamento">
-                        <Select placeholder="Select...">
-                            <Select.Option value="pix">Pix</Select.Option>
-                            <Select.Option value="credito">Crédito</Select.Option>
-                            <Select.Option value="debito">Débito</Select.Option>
-                            <Select.Option value="dinheiro">Dinheiro</Select.Option>
-                            <Select.Option value="boleto">Boleto</Select.Option>
-                            <Select.Option value="transferencia">Transferência</Select.Option>
-                        </Select>
-                    </Form.Item>
+  return (
+    <Space direction="vertical" style={{ width: "100%", padding: "0 20px" }}>
+      {/* Cards de Consolidação */}
+      <Space
+        direction="horizontal"
+        style={{ width: "100%", overflowX: "auto" }}
+      >
+        <CardFinancas
+          color="#D35050"
+          title="Despesas"
+          desc="Valor á pagar"
+          valor={consolidado.despesasAPagar?.toLocaleString("pt-BR", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}
+          icon={<FallOutlined />}
+        />
+        <CardFinancas
+          color="#62AA85"
+          title="Receitas"
+          desc="Previstas"
+          valor={consolidado.receitasPrevistas?.toLocaleString("pt-BR", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}
+          icon={<ClockCircleOutlined />}
+        />
+        <CardFinancas
+          color="#62AA85"
+          title="Receitas"
+          desc="Realizadas"
+          valor={consolidado.receitasRealizadas?.toLocaleString("pt-BR", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}
+          icon={<DollarOutlined />}
+        />
+        <CardFinancas
+          color="#62AA85"
+          title="Despesas"
+          desc="Realizadas"
+          valor={consolidado.despesasRealizadas?.toLocaleString("pt-BR", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}
+          icon={<CheckCircleOutlined />}
+        />
+      </Space>
 
-                    {/* Switch À vista / Parcelado */}
-                    <Form.Item name="modalidade">
-                        <Flex align="center" gap={10}>
-                            <span style={{ color: '#666' }}>À vista</span>
-                            <Switch size="small" />
-                            <span style={{ color: '#666' }}>Parcelado</span>
-                        </Flex>
-                    </Form.Item>
+      {/* Seletor de Período */}
+      <CardPeriodo periodo={periodo} onPeriodoChange={setPeriodo} />
 
-                    {/* Valor */}
-                    <Form.Item label="Valor" name="valor">
-                        <Input placeholder="Valor do Atendimento" prefix="R$" />
-                    </Form.Item>
-
-                    {/* Data do Lançamento */}
-                    <Form.Item label="Data do Lançamento" name="dataLancamento">
-                        <DatePicker
-                            placeholder="dd/mm/aaaa"
-                            format="DD/MM/YYYY"
-                            style={{ width: '100%' }}
-                            suffixIcon={<CalendarOutlined />}
-                        />
-                    </Form.Item>
-
-                    <div style={{ marginTop: 24 }}>
-                        <ButtonSubmit>Salvar Lançamento</ButtonSubmit>
-                        <ButtonWhatsapp>Enviar comprovante</ButtonWhatsapp>
-                    </div>
-                </Form>
-            </MyDrawer>
+      {/* Controles Superiores */}
+      <Space direction="horizontal" style={{ width: "100%", justifyContent: "space-between" }}>
+        <Segmented
+          value={view}
+          onChange={setView}
+          options={[
+            { label: "Pacientes", value: "pacientes" },
+            { label: "Lista", value: "lista" },
+            { label: "Grid", value: "grid" },
+          ]}
+        />
+        <Space>
+          <ButtonSecoundary icon={<FilterFilled />}>Filtro</ButtonSecoundary>
+          <ButtonSecoundary icon={<DownloadOutlined />}>
+            Baixar CSV
+          </ButtonSecoundary>
+          <ButtonSecoundary icon={<UserAddOutlined />} onClick={showDrawer}>
+            Novo lançamento
+          </ButtonSecoundary>
         </Space>
-    );
+      </Space>
+
+      {/* Views */}
+      {lancamentos.length === 0 && !loading ? (
+        <Container>
+          <EmptyComponent
+            description="Você ainda não criou nenhum lançamento"
+            btnText="Novo lançamento"
+            open={open}
+            onClose={onClose}
+            showDrawer={showDrawer}
+          />
+        </Container>
+      ) : (
+        <>
+          {view === "pacientes" && (
+            <ViewPacientes
+              lancamentos={lancamentos}
+              pacientes={pacientes}
+              loading={loading}
+              onPacienteClick={(id) => setView("lista")}
+            />
+          )}
+
+          {view === "lista" && (
+            <ViewLista
+              lancamentos={lancamentos}
+              loading={loading}
+              onEditar={handleEditarLancamento}
+              onDeletar={handleDeletarLancamento}
+            />
+          )}
+
+          {view === "grid" && (
+            <ViewGrid
+              lancamentos={lancamentos}
+              loading={loading}
+              onEditar={handleEditarLancamento}
+              onDeletar={handleDeletarLancamento}
+            />
+          )}
+        </>
+      )}
+
+      {/* Drawer Novo Lançamento */}
+      <MyDrawer
+        open={open}
+        onClose={onClose}
+        title="Novo Lançamento"
+        width={600}
+      >
+        <FormNovoLancamento
+          form={form}
+          onSubmit={handleNovoLancamento}
+          loading={loading}
+          pacientes={pacientes}
+          onCancel={onClose}
+        />
+      </MyDrawer>
+    </Space>
+  );
 }
