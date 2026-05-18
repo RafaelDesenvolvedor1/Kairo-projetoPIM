@@ -92,6 +92,26 @@ const financeirosService = {
     }
   },
 
+  // Upload de comprovante/arquivo para um lançamento
+  async uploadComprovante(id_lancamento, file) {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('id_lancamento', id_lancamento);
+
+      const response = await axios.post(`${API_BASE_URL}/anexos`, formData, {
+        headers: {
+          ...getAuthHeader(),
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('Erro ao enviar comprovante:', error);
+      return { success: false, message: error.response?.data?.msg || error.message };
+    }
+  },
+
   // Delete lançamento
   async deleteLancamento(id) {
     try {

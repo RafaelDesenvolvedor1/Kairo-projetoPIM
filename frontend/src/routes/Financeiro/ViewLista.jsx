@@ -1,12 +1,15 @@
 import { Empty, Spin, Table, Tag } from "antd";
-import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { EditOutlined, DeleteOutlined, CheckCircleOutlined, DollarOutlined, MessageOutlined, UndoOutlined, CloudUploadOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 
 export default function ViewLista({ 
   lancamentos, 
   loading,
   onEditar,
-  onDeletar 
+  onDeletar,
+  onAtualizarStatus,
+  onReverterStatus,
+  onAnexarComprovante
 }) {
   const columns = [
     {
@@ -88,22 +91,80 @@ export default function ViewLista({
     {
       title: "Ações",
       key: "acoes",
-      width: "8%",
+      width: "12%",
       fixed: "right",
-      render: (_, record) => (
-        <div style={{ display: "flex", gap: "8px" }}>
-          <EditOutlined
-            style={{ cursor: "pointer", color: "#1890ff" }}
-            onClick={() => onEditar(record)}
-            title="Editar"
-          />
-          <DeleteOutlined
-            style={{ cursor: "pointer", color: "#ff4d4f" }}
-            onClick={() => onDeletar(record.id_lancamento)}
-            title="Deletar"
-          />
-        </div>
-      ),
+      render: (_, record) => {
+        const isPendente = record.status === "Pendente";
+        const canEdit = record.status !== "Pago";
+        return (
+          <div style={{ display: "flex", gap: "8px", alignItems: 'center' }}>
+            {record.tipo === "DESPESA" && isPendente && (
+              <DollarOutlined
+                style={{ cursor: "pointer", color: "#ff4d4f" }}
+                onClick={() => onAtualizarStatus && onAtualizarStatus(record.id_lancamento)}
+                title="Pagar"
+              />
+            )}
+
+            {record.tipo === "RECEITA" && isPendente && (
+              <>
+                <CheckCircleOutlined
+                  style={{ cursor: "pointer", color: "#52c41a" }}
+                  onClick={() => onAtualizarStatus && onAtualizarStatus(record.id_lancamento)}
+                  title="Marcar como Recebido"
+                />
+                <MessageOutlined
+                  style={{ cursor: "pointer", color: "#888" }}
+                  onClick={() => console.log("Cobrança clicada", record.id_lancamento)}
+                  title="Cobrança"
+                />
+              </>
+            )}
+            {record.status === "Pago" && (
+              <UndoOutlined
+                style={{ cursor: "pointer", color: "#595959" }}
+                onClick={() => onReverterStatus && onReverterStatus(record.id_lancamento)}
+                title="Desfazer ação"
+              />
+            )}
+
+            {(record.tipo === "RECEITA" || record.tipo === "DESPESA") && (
+              <>
+                <input
+                  type="file"
+                  id={`upload-${record.id_lancamento}`}
+                  style={{ display: 'none' }}
+                  onChange={(e) => {
+                    const file = e.target.files && e.target.files[0];
+                    if (file && typeof onAnexarComprovante === 'function') {
+                      onAnexarComprovante(record.id_lancamento, file);
+                      e.target.value = null;
+                    }
+                  }}
+                />
+                <CloudUploadOutlined
+                  style={{ cursor: 'pointer', color: '#1890ff' }}
+                  onClick={() => document.getElementById(`upload-${record.id_lancamento}`).click()}
+                  title="Anexar comprovante"
+                />
+              </>
+            )}
+
+            {canEdit && (
+              <EditOutlined
+                style={{ cursor: "pointer", color: "#1890ff" }}
+                onClick={() => onEditar(record)}
+                title="Editar"
+              />
+            )}
+            <DeleteOutlined
+              style={{ cursor: "pointer", color: "#ff4d4f" }}
+              onClick={() => onDeletar(record.id_lancamento)}
+              title="Deletar"
+            />
+          </div>
+        );
+      },
     },
   ];
 

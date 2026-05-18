@@ -1,8 +1,9 @@
-import { Form, Input, Select, Radio, InputNumber, DatePicker, Space, Segmented, Button, Spin } from "antd";
+import { Form, Input, Select, Radio, InputNumber, DatePicker, Space, Segmented, Button, Spin, Dropdown, Menu } from "antd";
 import { useState, useEffect } from "react";
 import { useMessage } from "../../context/MessageProvider";
 import { Container, ContainerHorizontal, FormStyled } from "./styles";
 import ButtonSecoundary from "../../components/ButtonSecoundary";
+import ButtonPrimary from "../../components/ButtonPrimary";
 import ButtonSubmit from "../../components/ButtonSubmit";
 import EmptyComponent from "../../components/EmptyComponent";
 import MyDrawer from "../../components/MyDrawer";
@@ -55,6 +56,9 @@ export default function Financeiro() {
     { data_vencimento: null, valor_parcela: 0 },
   ]);
   const [selectedPacienteId, setSelectedPacienteId] = useState(null);
+  const [filterTipo, setFilterTipo] = useState("Todos");
+  const [filterStatus, setFilterStatus] = useState("Todos");
+  const [editingLancamentoId, setEditingLancamentoId] = useState(null);
 
   const categoriasMap = {
     RECEITA: ["Receita atendimento", "Receita produto", "Receita outros"],
@@ -117,6 +121,15 @@ export default function Financeiro() {
         pacientes.find((p) => p.id === item.id_paciente) ||
         item.paciente,
     }));
+  };
+
+  const resetFinanceiroForm = (keepTipo = false) => {
+    setEditingLancamentoId(null);
+    if (!keepTipo) setTipo("RECEITA");
+    setCategoria("");
+    setFormaPagamento("À vista");
+    setPrestacoes([{ data_vencimento: null, valor_parcela: 0 }]);
+    form.resetFields();
   };
 
   const handleNovoLancamento = async (valores) => {
@@ -185,6 +198,17 @@ export default function Financeiro() {
   };
 
   const handleFinishFinanceiro = async (values) => {
+    let payload = {
+      ...values,
+      tipo,
+      categoria,
+      forma_pagamento: isParcelado ? "Parcelado" : "À vista",
+      quantidade_parcelas: isParcelado ? prestacoes.length : 1,
+      data_lancamento: values.data_lancamento
+        ? values.data_lancamento.format("YYYY-MM-DD")
+        : dayjs().format("YYYY-MM-DD"),
+    };
+
     if (isParcelado) {
       const todasPreenchidas = prestacoes.every(
         (p) => p.data_vencimento && p.valor_parcela > 0
@@ -199,32 +223,46 @@ export default function Financeiro() {
         0
       );
 
-      await handleNovoLancamento({
-        ...values,
-        tipo,
-        categoria,
-        forma_pagamento: "Parcelado",
+      payload = {
+        ...payload,
         valor: valorTotal,
-        quantidade_parcelas: prestacoes.length,
         data_lancamento: prestacoes[0].data_vencimento.format("YYYY-MM-DD"),
         prestacoes: prestacoes.map((p, idx) => ({
           numero_parcela: idx + 1,
           data_vencimento: p.data_vencimento.format("YYYY-MM-DD"),
           valor_parcela: parseFloat(p.valor_parcela),
         })),
-      });
-    } else {
-      await handleNovoLancamento({
-        ...values,
-        tipo,
-        categoria,
-        forma_pagamento: "À vista",
-        quantidade_parcelas: 1,
-        data_lancamento: values.data_lancamento
-          ? values.data_lancamento.format("YYYY-MM-DD")
-          : dayjs().format("YYYY-MM-DD"),
-      });
+      };
     }
+
+    setLoading(true);
+
+    if (editingLancamentoId) {
+      const resultado = await financeirosService.updateLancamento(editingLancamentoId, payload);
+      if (resultado.success) {
+        messageApi.success("Lançamento atualizado com sucesso!");
+      } else {
+        messageApi.error(resultado.message || "Erro ao atualizar lançamento");
+        setLoading(false);
+        return;
+      }
+    } else {
+      const resultado = await financeirosService.createLancamento(payload);
+      if (resultado.success) {
+        messageApi.success("Lançamento criado com sucesso!");
+      } else {
+        messageApi.error(resultado.message);
+        setLoading(false);
+        return;
+      }
+    }
+
+    form.resetFields();
+    resetFinanceiroForm();
+    setOpen(false);
+    await carregarLancamentos();
+    await carregarConsolidado();
+    setLoading(false);
   };
 
   const handleDeletarLancamento = async (id) => {
@@ -241,17 +279,56 @@ export default function Financeiro() {
   };
 
   const handleEditarLancamento = (lancamento) => {
-    console.log("Editar:", lancamento);
-    messageApi.info("Edição ainda não implementada");
+    if (lancamento.status === "Pago") {
+      messageApi.warning("Não é possível editar um lançamento já pago.");
+      return;
+    }
+
+    setEditingLancamentoId(lancamento.id_lancamento);
+    setTipo(lancamento.tipo || "RECEITA");
+    setCategoria(lancamento.categoria || "");
+    setFormaPagamento(lancamento.forma_pagamento || "À vista");
+
+    if (lancamento.prestacoes && lancamento.prestacoes.length > 0) {
+      setPrestacoes(
+        lancamento.prestacoes.map((p) => ({
+          data_vencimento: p.data_vencimento ? dayjs(p.data_vencimento) : null,
+          valor_parcela: parseFloat(p.valor_parcela || 0),
+        }))
+      );
+    } else {
+      setPrestacoes([
+        {
+          data_vencimento: lancamento.data_lancamento
+            ? dayjs(lancamento.data_lancamento)
+            : null,
+          valor_parcela: parseFloat(lancamento.valor || 0),
+        },
+      ]);
+    }
+
+    form.setFieldsValue({
+      id_paciente: lancamento.id_paciente || undefined,
+      tipo: lancamento.tipo,
+      categoria: lancamento.categoria,
+      descricao: lancamento.descricao,
+      forma_pagamento: lancamento.forma_pagamento || "À vista",
+      valor: lancamento.valor ? parseFloat(lancamento.valor) : undefined,
+      data_lancamento: lancamento.data_lancamento
+        ? dayjs(lancamento.data_lancamento)
+        : undefined,
+    });
+    setOpen(true);
   };
 
   const showDrawer = () => {
+    resetFinanceiroForm();
     setOpen(true);
   };
 
   const onClose = () => {
     setOpen(false);
-    form.resetFields();
+    resetFinanceiroForm();
   };
 
   const handlePacienteClick = (id) => {
@@ -263,9 +340,55 @@ export default function Financeiro() {
     setSelectedPacienteId(null);
   };
 
-  const filteredLancamentos = selectedPacienteId
-    ? lancamentos.filter((l) => l.id_paciente === selectedPacienteId)
-    : lancamentos;
+  const atualizarStatus = async (id_lancamento) => {
+    setLoading(true);
+    const resultado = await financeirosService.updateLancamento(id_lancamento, {
+      status: "Pago",
+      data_pagamento: dayjs().format("YYYY-MM-DD"),
+    });
+    if (resultado.success) {
+      messageApi.success("Status atualizado com sucesso");
+      await carregarLancamentos();
+      await carregarConsolidado();
+    } else {
+      messageApi.error(resultado.message || "Erro ao atualizar status");
+    }
+    setLoading(false);
+  };
+
+  const reverterStatus = async (id_lancamento) => {
+    setLoading(true);
+    const resultado = await financeirosService.updateLancamento(id_lancamento, {
+      status: "Pendente",
+      data_pagamento: null,
+    });
+    if (resultado.success) {
+      messageApi.success("Ação desfeita com sucesso");
+      await carregarLancamentos();
+      await carregarConsolidado();
+    } else {
+      messageApi.error(resultado.message || "Erro ao desfazer ação");
+    }
+    setLoading(false);
+  };
+
+  const filteredLancamentos = (() => {
+    let items = selectedPacienteId
+      ? lancamentos.filter((l) => l.id_paciente === selectedPacienteId)
+      : lancamentos;
+
+    if (filterTipo && filterTipo !== "Todos") {
+      if (filterTipo === "Receitas") items = items.filter((l) => l.tipo === "RECEITA");
+      if (filterTipo === "Despesas") items = items.filter((l) => l.tipo === "DESPESA");
+    }
+
+    if (filterStatus && filterStatus !== "Todos") {
+      if (filterStatus === "Pendente") items = items.filter((l) => l.status === "Pendente");
+      if (filterStatus === "Pago") items = items.filter((l) => l.status === "Pago");
+    }
+
+    return items;
+  })();
 
   return (
     <Space direction="vertical" style={{ width: "100%", padding: "0 20px" }}>
@@ -336,13 +459,44 @@ export default function Financeiro() {
           ]}
         />
         <Space>
-          <ButtonSecoundary icon={<FilterFilled />}>Filtro</ButtonSecoundary>
+          <Dropdown
+            overlay={
+              <Menu onClick={({ key }) => setFilterTipo(key)}>
+                <Menu.Item key="Todos">Todos</Menu.Item>
+                <Menu.Item key="Receitas">Apenas Receitas</Menu.Item>
+                <Menu.Item key="Despesas">Apenas Despesas</Menu.Item>
+              </Menu>
+            }
+          >
+            <ButtonSecoundary icon={<FilterFilled />}>Filtro</ButtonSecoundary>
+          </Dropdown>
+          <Dropdown
+            overlay={
+              <Menu
+                onClick={({ key }) => {
+                  if (key === "Limpar") {
+                    setFilterTipo("Todos");
+                    setFilterStatus("Todos");
+                  } else {
+                    setFilterStatus(key);
+                  }
+                }}
+              >
+                <Menu.Item key="Todos">Todos</Menu.Item>
+                <Menu.Item key="Pendente">Pendentes</Menu.Item>
+                <Menu.Item key="Pago">Pagos</Menu.Item>
+                <Menu.Item key="Limpar">Limpar filtros</Menu.Item>
+              </Menu>
+            }
+          >
+            <ButtonSecoundary>Situação</ButtonSecoundary>
+          </Dropdown>
           <ButtonSecoundary icon={<DownloadOutlined />}>
             Baixar CSV
           </ButtonSecoundary>
-          <ButtonSecoundary icon={<UserAddOutlined />} onClick={showDrawer}>
+          <ButtonPrimary icon={<UserAddOutlined />} onClick={showDrawer}>
             Novo lançamento
-          </ButtonSecoundary>
+          </ButtonPrimary>
         </Space>
       </Space>
 
@@ -374,6 +528,19 @@ export default function Financeiro() {
               loading={loading}
               onEditar={handleEditarLancamento}
               onDeletar={handleDeletarLancamento}
+              onAtualizarStatus={atualizarStatus}
+              onReverterStatus={reverterStatus}
+              onAnexarComprovante={async (id_lancamento, file) => {
+                setLoading(true);
+                const resultado = await financeirosService.uploadComprovante(id_lancamento, file);
+                if (resultado.success) {
+                  messageApi.success('Comprovante enviado com sucesso');
+                  await carregarLancamentos();
+                } else {
+                  messageApi.error(resultado.message || 'Erro ao enviar comprovante');
+                }
+                setLoading(false);
+              }}
             />
           )}
 
@@ -383,13 +550,26 @@ export default function Financeiro() {
               loading={loading}
               onEditar={handleEditarLancamento}
               onDeletar={handleDeletarLancamento}
+              onAtualizarStatus={atualizarStatus}
+              onReverterStatus={reverterStatus}
+              onAnexarComprovante={async (id_lancamento, file) => {
+                setLoading(true);
+                const resultado = await financeirosService.uploadComprovante(id_lancamento, file);
+                if (resultado.success) {
+                  messageApi.success('Comprovante enviado com sucesso');
+                  await carregarLancamentos();
+                } else {
+                  messageApi.error(resultado.message || 'Erro ao enviar comprovante');
+                }
+                setLoading(false);
+              }}
             />
           )}
         </>
       )}
 
       {/* Drawer Novo Lançamento */}
-      <MyDrawer open={open} onClose={onClose} title="Novo Lançamento" width={600}>
+      <MyDrawer open={open} onClose={onClose} title={editingLancamentoId ? "Editar Lançamento" : "Novo Lançamento"} width={600}>
         <FormStyled
           form={form}
           layout="vertical"
@@ -560,7 +740,9 @@ export default function Financeiro() {
 
             {/* <Form.Item style={{ marginTop: 24 }}> */}
               {/* <Space style={{ width: "100%", justifyContent: "flex-end", alignItems: "center" }}> */}
-                <ButtonSubmit loading={loading}>Salvar Lançamento</ButtonSubmit>
+                <ButtonSubmit loading={loading}>
+                  {editingLancamentoId ? "Atualizar Lançamento" : "Salvar Lançamento"}
+                </ButtonSubmit>
                 <ButtonSecoundary block onClick={onClose}>Cancelar</ButtonSecoundary>
               {/* </Space> */}
             {/* </Form.Item> */}
