@@ -16,6 +16,9 @@ module.exports = (app) => {
     parcelalancamento: Parcelalancamento,
     logsAcesso: Logs_Acesso,
     equipe: Equipe,
+    locais: Locais,
+    servicos: Servicos,
+    horarios: Horarios,
   } = models;
 
   if (Users) {
@@ -36,6 +39,15 @@ module.exports = (app) => {
     }
     if (Pacientes) {
       Users.hasMany(Pacientes, { foreignKey: 'id_usuario', as: 'pacientes' });
+    }
+    if (Locais) {
+      Users.hasMany(Locais, { foreignKey: 'id_usuario', as: 'locais' });
+    }
+    if (Servicos) {
+      Users.hasMany(Servicos, { foreignKey: 'id_usuario', as: 'servicos' });
+    }
+    if (Horarios) {
+      Users.hasMany(Horarios, { foreignKey: 'id_usuario', as: 'horarios' });
     }
     if (Equipe) {
       Users.hasOne(Equipe, { foreignKey: 'id_usuario', as: 'equipe_perfil' });
@@ -133,5 +145,23 @@ module.exports = (app) => {
 
   if (Equipe) {
     Equipe.belongsTo(Users, { foreignKey: 'id_usuario', as: 'usuario' });
+  }
+
+  if (Horarios) {
+    if (Users) {
+      Horarios.belongsTo(Users, { foreignKey: 'id_usuario', as: 'usuario' });
+    }
+    if (Locais) {
+      Horarios.belongsTo(Locais, { foreignKey: 'id_local', as: 'local' });
+    }
+  }
+
+  if (Locais) {
+    if (Users) {
+      Locais.belongsTo(Users, { foreignKey: 'id_usuario', as: 'usuario' });
+    }
+    if (Horarios) {
+      Locais.hasMany(Horarios, { foreignKey: 'id_local', as: 'horarios' });
+    }
   }
 };

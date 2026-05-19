@@ -1,0 +1,83 @@
+module.exports = (app) => {
+  const Servicos = app.models.servicos || app.models.Servicos;
+
+  app
+    .route('/servicos')
+    .all(app.auth.authenticate())
+    .get(async (req, res) => {
+      try {
+        const result = await Servicos.findAll({
+          where: { id_usuario: req.user.id_usuario },
+          order: [['nome', 'ASC']],
+        });
+        res.json(result);
+      } catch (err) {
+        res.status(412).json({ msg: err.message });
+      }
+    })
+    .post(async (req, res) => {
+      try {
+        req.body.id_usuario = req.user.id_usuario;
+        const result = await Servicos.create(req.body);
+        res.status(201).json(result);
+      } catch (err) {
+        if (err && err.name === 'SequelizeValidationError') {
+          return res.status(412).json({ msg: err.errors.map((e) => e.message).join(', ') });
+        }
+        res.status(412).json({ msg: err.message });
+      }
+    });
+
+  app
+    .route('/servicos/:id')
+    .all(app.auth.authenticate())
+    .get(async (req, res) => {
+      try {
+        const { id } = req.params;
+        const result = await Servicos.findOne({
+          where: { id_servico: id, id_usuario: req.user.id_usuario },
+        });
+        if (!result) return res.sendStatus(404);
+        res.json(result);
+      } catch (err) {
+        res.status(412).json({ msg: err.message });
+      }
+    })
+    .put(async (req, res) => {
+      try {
+        const { id } = req.params;
+        delete req.body.id_usuario;
+
+        const [updatedRows] = await Servicos.update(req.body, {
+          where: { id_servico: id, id_usuario: req.user.id_usuario },
+        });
+
+        if (updatedRows === 0) {
+          return res.sendStatus(404);
+        }
+
+        const updated = await Servicos.findOne({
+          where: { id_servico: id, id_usuario: req.user.id_usuario },
+        });
+
+        res.json(updated);
+      } catch (err) {
+        if (err && err.name === 'SequelizeValidationError') {
+          return res.status(412).json({ msg: err.errors.map((e) => e.message).join(', ') });
+        }
+        res.status(412).json({ msg: err.message });
+      }
+    })
+    .delete(async (req, res) => {
+      try {
+        const { id } = req.params;
+        const deletedRows = await Servicos.destroy({
+          where: { id_servico: id, id_usuario: req.user.id_usuario },
+        });
+        if (deletedRows === 0) return res.sendStatus(404);
+        res.sendStatus(204);
+      } catch (err) {
+        res.status(412).json({ msg: err.message });
+      }
+    });
+};
