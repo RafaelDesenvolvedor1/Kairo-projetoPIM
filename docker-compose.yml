@@ -6,10 +6,10 @@ services:
     container_name: projeto-pim-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: kairodb
-      MYSQL_USER: user
-      MYSQL_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
       - "3306:3306"
     volumes:
@@ -22,18 +22,20 @@ services:
     container_name: projeto-pim-backend
     restart: unless-stopped
     volumes:
-      - ./backend:/app              # Sincroniza sua pasta backend local com o container
-      - /app/node_modules           # Protege os módulos instalados no container
+      - ./backend:/app           # Sincroniza sua pasta backend local com o container
+      - /app/node_modules          # Protege os módulos instalados no container
     working_dir: /app
     command: npm run dev            # Executa o script de desenvolvimento
+    env_file:
+      - .env                      # <-- ALTERADO AQUI! Aponta para o .env da raiz
     environment:
-      DB_HOST: mysql
-      DB_PORT: 3306
-      DB_USER: user
-      DB_PASS: password
-      DB_NAME: kairodb
-      PORT: 3000
-      JWT_SECRET: my-super-secret-key
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+      DB_NAME: ${DB_NAME}
+      PORT: ${BACKEND_PORT}
+      JWT_SECRET: ${JWT_SECRET}
     ports:
       - "3000:3000"
     depends_on:
@@ -50,8 +52,8 @@ services:
       - ./frontend:/app             # Sincroniza sua pasta frontend local
       - /app/node_modules           # Protege os módulos do frontend
     environment:
-      - VITE_API_PORT=3000
-      - VITE_API_URL=/api
+      - VITE_API_PORT=${VITE_API_PORT}
+      - VITE_API_URL=${VITE_API_URL}
     ports:
       - "5173:5173"
     # O --host garante que o Vite aceite conexões de fora do container

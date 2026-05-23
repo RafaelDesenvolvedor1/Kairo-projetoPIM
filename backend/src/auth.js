@@ -25,6 +25,15 @@ module.exports = (app) => {
         }
     }));
 
+    // Inicializar estratégias do Passport (incluindo Google OAuth)
+    require('./config/passport.js')(app);
+
+    // Retornar objeto com métodos Passport
+    app.passport = {
+        authenticate: (strategy, options) => passport.authenticate(strategy, options),
+        initialize: () => passport.initialize(),
+    };
+
     return {
         initialize: () => passport.initialize(),
         authenticate: () => passport.authenticate('jwt', { session: false }),
