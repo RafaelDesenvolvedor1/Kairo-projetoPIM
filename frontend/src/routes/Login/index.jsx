@@ -1,6 +1,6 @@
-import React from "react";
-import { Layout, Card, Form, Input, Button, Checkbox, Typography } from "antd";
-import { UserOutlined, LockOutlined, MailOutlined } from "@ant-design/icons";
+import React, { useEffect } from "react";
+import { Layout, Card, Form, Input, Button, Checkbox, Typography, Divider } from "antd";
+import { UserOutlined, LockOutlined, MailOutlined, GoogleOutlined } from "@ant-design/icons";
 import ButtonSubmit from "../../components/ButtonSubmit";
 import ButtonSecoundary from "../../components/ButtonSecoundary";
 import { useNavigate, Link } from "react-router";
@@ -13,6 +13,20 @@ const { Title, Text } = Typography;
 export default () => {
   const navigate = useNavigate();
   const messageApi = useMessage();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    const nome = params.get('nome');
+
+    if (token) {
+      localStorage.setItem('token', token);
+      if (nome) {
+        localStorage.setItem('nome', nome);
+      }
+      navigate('/');
+    }
+  }, [navigate]);
 
   const onFinish = async (values) => {
     try {
@@ -122,6 +136,20 @@ export default () => {
               <ButtonSubmit block>
                 Entrar
               </ButtonSubmit>
+
+              <Divider style={{ margin: "16px 0" }}>OU</Divider>
+
+              <ButtonSecoundary 
+                block 
+                size="large"
+                icon={<GoogleOutlined />}
+                onClick={() => window.location.href = 'http://localhost:3000/auth/google'}
+                style={{
+                  fontWeight: 'bold'
+                }}
+              >
+                Entrar com Google
+              </ButtonSecoundary>
             </Form>
           </Card>
         </div>

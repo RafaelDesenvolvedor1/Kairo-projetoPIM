@@ -46,6 +46,24 @@ module.exports = (app) => {
             type: DataTypes.DATE,
             allowNull: true,
         },
+        // Campos para Google OAuth2
+        google_id: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            unique: true,
+        },
+        google_access_token: {
+            type: DataTypes.TEXT,
+            allowNull: true,
+        },
+        google_refresh_token: {
+            type: DataTypes.TEXT,
+            allowNull: true,
+        },
+        google_token_expiry: {
+            type: DataTypes.DATE,
+            allowNull: true,
+        },
     }, {
         tableName: 'Usuarios',
         timestamps: false,
