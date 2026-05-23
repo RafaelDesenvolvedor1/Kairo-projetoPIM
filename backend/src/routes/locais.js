@@ -7,7 +7,7 @@ module.exports = (app) => {
     .get(async (req, res) => {
       try {
         const result = await Locais.findAll({
-          where: { id_usuario: req.user.id_usuario },
+          where: { id_usuario: req.user.id_usuario, ativo: true },
           order: [['nome', 'ASC']],
         });
         res.json(result);

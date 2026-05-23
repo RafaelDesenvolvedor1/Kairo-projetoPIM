@@ -159,6 +159,63 @@ module.exports = (app) => {
                 console.error('Erro ao deletar evento do Google Calendar:', error);
                 throw error;
             }
+        },
+
+        /**
+         * Criar evento no Google Calendar a partir de um agendamento
+         * @param {number} userId - ID do usuário
+         * @param {object} agendamentoData - Dados do agendamento { data_hora_inicio, data_hora_fim, observacoes }
+         * @param {string} pacienteName - Nome do paciente
+         * @returns {object} Resposta da API do Google
+         */
+        createScheduleEvent: async (userId, agendamentoData, pacienteName) => {
+            try {
+                const user = await Users.findByPk(userId);
+
+                if (!user || !user.google_access_token) {
+                    console.warn(`Usuário ${userId} não possui token Google para criar evento`);
+                    return null;
+                }
+
+                const auth = new google.auth.OAuth2({
+                    clientID: process.env.GOOGLE_CLIENT_ID,
+                    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+                    redirectURL: process.env.GOOGLE_CALLBACK_URL
+                });
+
+                auth.setCredentials({
+                    access_token: user.google_access_token,
+                    refresh_token: user.google_refresh_token
+                });
+
+                const calendar = google.calendar({ version: 'v3', auth });
+
+                const eventData = {
+                    summary: `Agendamento - ${pacienteName}`,
+                    description: agendamentoData.observacoes || 'Sem observações',
+                    start: {
+                        dateTime: new Date(agendamentoData.data_hora_inicio).toISOString(),
+                        timeZone: 'America/Sao_Paulo'
+                    },
+                    end: {
+                        dateTime: new Date(agendamentoData.data_hora_fim).toISOString(),
+                        timeZone: 'America/Sao_Paulo'
+                    },
+                    notifications: {
+                        useDefault: true
+                    }
+                };
+
+                const event = await calendar.events.insert({
+                    calendarId: 'primary',
+                    resource: eventData
+                });
+
+                return event.data;
+            } catch (error) {
+                console.error('Erro ao criar evento no Google Calendar:', error);
+                return null;
+            }
         }
     };
 };

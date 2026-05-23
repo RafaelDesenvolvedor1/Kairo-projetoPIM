@@ -14,19 +14,31 @@ export default () => {
   const navigate = useNavigate();
   const messageApi = useMessage();
 
+  // Capturar tokens do Google OAuth quando redirecionar da callback
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
     const nome = params.get('nome');
 
     if (token) {
+      // Salvar token no localStorage com a mesma chave do login local
       localStorage.setItem('token', token);
+      
+      // Salvar nome do usuário se fornecido
       if (nome) {
         localStorage.setItem('nome', nome);
       }
+
+      // Limpar a URL de query strings
+      window.history.replaceState({}, document.title, window.location.pathname);
+
+      // Redirecionar para a rota interna
       navigate('/');
+      
+      // Notificar sucesso
+      messageApi.success('Login com Google realizado com sucesso!');
     }
-  }, [navigate]);
+  }, [navigate, messageApi]);
 
   const onFinish = async (values) => {
     try {
