@@ -32,6 +32,11 @@ module.exports = (app) => {
             type: DataTypes.TEXT,
             allowNull: true,
         },
+        // Nova coluna para vincular o agendamento ao evento do Google Agenda
+        google_event_id: {
+            type: DataTypes.STRING(255),
+            allowNull: true,
+        },
     }, {
         tableName: 'Agendamentos',
         timestamps: false,

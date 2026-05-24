@@ -53,7 +53,7 @@ module.exports = (app) => {
                     return res.status(409).json({ message: 'Já existe um agendamento neste dia e horário' });
                 }
 
-                // Criar agendamento no banco
+                // Criar agendamento no banco local
                 const agendamento = await Agendamentos.create({
                     id_paciente,
                     id_usuario,
@@ -64,11 +64,18 @@ module.exports = (app) => {
                 });
 
                 // Tentar criar evento no Google Calendar se usuário estiver autenticado
-                await googleCalendarService.createScheduleEvent(
+                // Ajustado para pegar corretamente o nome do paciente
+                const nomeDoPaciente = paciente.nomePaciente || paciente.nome || 'Paciente';
+                const googleEvent = await googleCalendarService.createScheduleEvent(
                     id_usuario,
                     { data_hora_inicio, data_hora_fim, observacoes },
-                    paciente.nomePaciente
+                    nomeDoPaciente
                 );
+
+                // Se o Google gerou um ID de evento válido, salva no agendamento local
+                if (googleEvent && googleEvent.id) {
+                    await agendamento.update({ google_event_id: googleEvent.id });
+                }
 
                 return res.json({
                     message: 'Agendamento criado com sucesso',
@@ -143,7 +150,8 @@ module.exports = (app) => {
 
                 // Buscar agendamento
                 const agendamento = await Agendamentos.findOne({
-                    where: { id_agendamento: id, id_usuario }
+                    where: { id_agendamento: id, id_usuario },
+                    include: [{ association: 'paciente' }]
                 });
 
                 if (!agendamento) {
@@ -180,7 +188,7 @@ module.exports = (app) => {
                     }
                 }
 
-                // Atualizar agendamento
+                // Atualizar agendamento local
                 const updateData = {};
                 if (data_hora_inicio) updateData.data_hora_inicio = data_hora_inicio;
                 if (data_hora_fim) updateData.data_hora_fim = data_hora_fim;
@@ -188,6 +196,27 @@ module.exports = (app) => {
                 if (observacoes !== undefined) updateData.observacoes = observacoes;
 
                 await agendamento.update(updateData);
+
+                // ATUALIZAÇÃO NO GOOGLE CALENDAR
+                // Se o agendamento local possui um ID de evento do Google, atualiza lá também
+                if (agendamento.google_event_id) {
+                    const nomeDoPaciente = agendamento.paciente ? (agendamento.paciente.nomePaciente || agendamento.paciente.nome) : 'Paciente';
+                    const eventData = {
+                        summary: `Agendamento - ${nomeDoPaciente}`,
+                        description: updateData.observacoes || agendamento.observacoes || 'Sem observações',
+                        start: {
+                            dateTime: new Date(updateData.data_hora_inicio || agendamento.data_hora_inicio).toISOString(),
+                            timeZone: 'America/Sao_Paulo'
+                        },
+                        end: {
+                            dateTime: new Date(updateData.data_hora_fim || agendamento.data_hora_fim).toISOString(),
+                            timeZone: 'America/Sao_Paulo'
+                        }
+                    };
+
+                    // Dispara a atualização para a API do Google através do service que o Copilot criou
+                    await googleCalendarService.updateCalendarEvent(id_usuario, agendamento.google_event_id, eventData);
+                }
 
                 const updated = await Agendamentos.findOne({
                     where: { id_agendamento: id, id_usuario },
@@ -217,6 +246,13 @@ module.exports = (app) => {
                     return res.status(404).json({ message: 'Agendamento não encontrado' });
                 }
 
+                // REMOÇÃO NO GOOGLE CALENDAR
+                // Se existir o vínculo com o Google Agenda, deleta o evento automaticamente de lá
+                if (agendamento.google_event_id) {
+                    await googleCalendarService.deleteCalendarEvent(id_usuario, agendamento.google_event_id);
+                }
+
+                // Destrói o registro no banco local
                 await agendamento.destroy();
 
                 return res.json({ message: 'Agendamento deletado com sucesso' });
