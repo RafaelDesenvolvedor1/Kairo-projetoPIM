@@ -95,6 +95,7 @@ export default function Financeiro() {
     }
   };
 
+
   const carregarLancamentos = async () => {
     setLoading(true);
     const resultado = await financeirosService.getLancamentos(periodo);
@@ -242,7 +243,7 @@ export default function Financeiro() {
     if (editingLancamentoId) {
       const resultado = await financeirosService.updateLancamento(editingLancamentoId, payload);
       if (resultado.success) {
-        messageApi.success("Lançamento atualizado com sucesso!");
+        messageApi.success("Lançamento actualizado com sucesso!");
       } else {
         messageApi.error(resultado.message || "Erro ao atualizar lançamento");
         setLoading(false);
@@ -579,19 +580,23 @@ export default function Financeiro() {
           onFinish={handleFinishFinanceiro}
         >
           <Spin spinning={loading}>
-            <Form.Item name="id_paciente" label="Selecionar Paciente (Opcional)">
-              <Select
-                placeholder="Selecione um paciente"
-                allowClear
-                options={pacientes
-                  .filter((p) => p.id_usuario === currentUser?.id_usuario)
-                  .map((p) => ({
-                    label: p.nomePaciente,
-                    value: p.id,
-                    key: p.id,
-                  }))}
-              />
-            </Form.Item>
+          <Form.Item name="id_paciente" label="Selecionar Paciente (Opcional)">
+            <Select
+              placeholder="Selecione um paciente"
+              allowClear
+              showSearch
+              optionFilterProp="label"
+              options={pacientes
+                // 1. Filtra garantindo que o paciente pertence ao Lucas Vieira (id_usuario: 1)
+                // .filter((p) => String(p.id_usuario || p.usuario_id || p.userId) === String(currentUser?.id_usuario))
+                // 2. Mapeia os campos exatos que vieram do banco de dados
+                .map((p) => ({
+                  label: p.nomePaciente || p.nome || p.nome_paciente, // Tenta todas as variações de nome
+                  value: p.id || p.id_paciente,                       // Tenta as variações de ID primário
+                  key: p.id || p.id_paciente,
+                }))}
+            />
+           </Form.Item>
 
             <Form.Item name="tipo" label="Tipo" initialValue="RECEITA">
               <Radio.Group onChange={(e) => setTipo(e.target.value)} value={tipo}>
@@ -742,14 +747,10 @@ export default function Financeiro() {
               </div>
             )}
 
-            {/* <Form.Item style={{ marginTop: 24 }}> */}
-              {/* <Space style={{ width: "100%", justifyContent: "flex-end", alignItems: "center" }}> */}
-                <ButtonSubmit loading={loading}>
-                  {editingLancamentoId ? "Atualizar Lançamento" : "Salvar Lançamento"}
-                </ButtonSubmit>
-                <ButtonSecoundary block onClick={onClose}>Cancelar</ButtonSecoundary>
-              {/* </Space> */}
-            {/* </Form.Item> */}
+            <ButtonSubmit loading={loading}>
+              {editingLancamentoId ? "Atualizar Lançamento" : "Salvar Lançamento"}
+            </ButtonSubmit>
+            <ButtonSecoundary block onClick={onClose}>Cancelar</ButtonSecoundary>
           </Spin>
         </FormStyled>
       </MyDrawer>
