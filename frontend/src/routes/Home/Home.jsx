@@ -1,5 +1,5 @@
-import React from 'react';
-import { Space, Row, Col, Typography } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Space, Row, Col, Typography, Spin } from 'antd';
 import { Title as CustomTitle } from "../../components/Title";
 import CardFastAcess from "../../components/CardFastAcess";
 import FinanceChart from "../../components/FinanceChart";
@@ -7,20 +7,63 @@ import CardAgendasDia from "../../components/CardAgendasDia";
 import { SummaryCard, Label, Value, IconCircle } from "../../components/DashBoardCards/styles";
 import { FaUserGroup, FaMoneyBillTrendUp, FaCalendar, FaHeart, FaCheck, FaDollarSign } from "react-icons/fa6";
 import { Link } from "react-router";
+import agendamentosService from '../../services/agendamentosService';
 
 const { Text } = Typography;
 
+const getIniciais = (nome) => {
+  if (!nome) return 'P';
+  const partes = nome.trim().split(' ');
+  if (partes.length > 1) {
+    return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
+  }
+  return partes[0].substring(0, 2).toUpperCase();
+};
+
+const formatarHora = (dataString) => {
+  if (!dataString) return '--:--';
+  const data = new Date(dataString);
+  return data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+};
+
 export default function Home() {
-const dashCards = [
+  const [agendamentosHoje, setAgendamentosHoje] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const buscarAgendamentosDoDia = async () => {
+      try {
+        // Consumindo o método centralizado do seu Service
+        const resultado = await agendamentosService.listarAgendamentosHoje();
+
+        if (resultado.success && resultado.data) {
+          const dadosFormatados = resultado.data.map(agendamento => {
+            const nomePaciente = agendamento.paciente?.nomePaciente || 'Paciente';
+            return {
+              iniciais: getIniciais(nomePaciente),
+              nome: nomePaciente,
+              horario: formatarHora(agendamento.data_hora_inicio)
+            };
+          });
+          setAgendamentosHoje(dadosFormatados);
+        }
+      } catch (error) {
+        console.error("Erro ao processar agendamentos na Home:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    buscarAgendamentosDoDia();
+  }, []);
+
+  const dashCards = [
     {
       id: 'agendas_dia',
       component: CardAgendasDia,
-      data: [
-        { iniciais: 'CS', nome: 'Cleiton Santos', horario: '12:38' },
-        { iniciais: 'CS', nome: 'Cleiton Santos', horario: '12:38' }
-      ]
+      data: agendamentosHoje
     },
-  ]
+  ];
 
   return (
     <Space direction="vertical" style={{ width: '100%', padding: '20px' }} size={32}>
@@ -61,14 +104,15 @@ const dashCards = [
         </Col>
       </Row>
 
-   
       {/* Renderização Dinâmica dos Cards */}
       <Row gutter={[24, 24]}>
         {dashCards.map((card) => {
           const ComponenteCard = card.component;
           return (
             <Col xs={24} md={12} lg={8} key={card.id}>
-              <ComponenteCard agendamentos={card.data} />
+              <Spin spinning={loading}>
+                <ComponenteCard agendamentos={card.data} />
+              </Spin>
             </Col>
           );
         })}

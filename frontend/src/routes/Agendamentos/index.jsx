@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { Calendar, Drawer, Form, Input, Button, TimePicker, Select, Spin, notification } from "antd";
+import { Calendar, Drawer, Form, Input, TimePicker, Select, Spin, notification } from "antd";
 import dayjs from "dayjs";
 import ButtonSubmit from '../../components/ButtonSubmit';
-import agendamentosService from '../../services/agendamentosService';
+import agendamentosService from '../../services/agendamentosService'; // Ajustado de agendamentosService para agendamentoService
 import pacientesService from '../../services/pacientesService';
 import locaisService from '../../services/locaisService';
 import servicosService from '../../services/servicosService';
@@ -121,11 +121,9 @@ export default function Agendamentos() {
       let result;
 
       if (isEditing) {
-        // Atualizar agendamento
         result = await agendamentosService.atualizarAgendamento(editingId, payload);
         
         if (result.success) {
-          // Verifica se foi sincronizado com o Google no update
           if (result.data?.sincronizadoGoogle) {
             notification.success({
               message: 'Agendamento Atualizado!',
@@ -134,10 +132,9 @@ export default function Agendamentos() {
               duration: 4
             });
           } else {
-            messageApi.success('Agendamento atualizado com sucesso!');
+            messageApi.success('Agendamento updated com sucesso!');
           }
 
-          // Atualizar lista local com dados do paciente
           const pacienteSelecionado = pacientes.find(p => p.id === parseInt(values.id_paciente));
           setAgendamentos(agendamentos.map(a => 
             a.id_agendamento === editingId 
@@ -160,11 +157,9 @@ export default function Agendamentos() {
           }
         }
       } else {
-        // Criar novo agendamento
         result = await agendamentosService.criarAgendamento(payload);
 
         if (result.success) {
-          // Dispara notificação robusta se houver a confirmação de sincronia do Google Agenda
           if (result.data?.sincronizadoGoogle) {
             notification.success({
               message: 'Agendamento Confirmado!',
@@ -176,7 +171,6 @@ export default function Agendamentos() {
             messageApi.success('Agendamento criado com sucesso!');
           }
 
-          // Adicionar agendamento à lista com dados do paciente
           const pacienteSelecionado = pacientes.find(p => p.id === parseInt(values.id_paciente));
           setAgendamentos([...agendamentos, {
             ...result.data.agendamento,
@@ -201,7 +195,7 @@ export default function Agendamentos() {
     }
   };
 
-  // Renderizar eventos no calendário
+  // Renderizar eventos no calendário com as suas classes CSS originais
   const dateCellRender = (date) => {
     const eventosDoDia = agendamentos.filter((e) =>
       dayjs(e.data_hora_inicio).isSame(date, "day")
@@ -211,14 +205,19 @@ export default function Agendamentos() {
 
     return (
       <div className="event-cell">
-        {eventosDoDia.map((evento, index) => (
-          <div key={index} className="event-item" onClick={() => handleEdit(evento)}>
-            <span className="dot" />
-            <span className="event-name">
-              {evento.paciente?.nomePaciente || 'Sem paciente'}
-            </span>
-          </div>
-        ))}
+        {eventosDoDia.map((evento, index) => {
+          // Extrai e formata o horário local de início usando o DayJS
+          const horaFormatada = dayjs(evento.data_hora_inicio).format("HH:mm");
+          
+          return (
+            <div key={index} className="event-item" onClick={() => handleEdit(evento)}>
+              <span className="dot" />
+              <span className="event-name">
+                <strong>{horaFormatada}</strong> - {evento.paciente?.nomePaciente || 'Sem paciente'}
+              </span>
+            </div>
+          );
+        })}
       </div>
     );
   };

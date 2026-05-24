@@ -128,6 +128,25 @@ const agendamentosService = {
         message: error.response?.data?.message || error.message 
       };
     }
+  },
+
+  /**
+   * Listar agendamentos do dia atual (Hoje)
+   * @returns {object} Resposta do servidor
+   */
+  async listarAgendamentosHoje() {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/agendamentos/hoje`, {
+        headers: getAuthHeader(),
+      });
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('Erro ao listar agendamentos de hoje:', error);
+      return { 
+        success: false, 
+        message: error.response?.data?.message || error.message 
+      };
+    }
   }
 };
 

@@ -12,6 +12,14 @@ module.exports = (app) => {
             await agendamentoController.listAll(req, res);
         });
 
+    // NOVA ROTA: Listar agendamentos específicos do dia de hoje
+    app
+        .route('/agendamentos/hoje')
+        .all(app.auth.authenticate())
+        .get(async (req, res) => {
+            await agendamentoController.listToday(req, res);
+        });
+
     // Operações com agendamento específico (GET, PUT, DELETE)
     app
         .route('/agendamentos/:id')
