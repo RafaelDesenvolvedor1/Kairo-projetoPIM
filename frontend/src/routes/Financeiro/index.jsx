@@ -27,6 +27,7 @@ import {
 } from "@ant-design/icons";
 
 import financeirosService from "../../services/financeirosService";
+import authService from "../../services/authService";
 import dayjs from "dayjs";
 
 export default function Financeiro() {
@@ -35,6 +36,7 @@ export default function Financeiro() {
   const [loading, setLoading] = useState(false);
   const [view, setView] = useState("lista"); // "pacientes", "lista", "grid"
   const messageApi = useMessage();
+  const currentUser = authService.getCurrentUser();
 
   // Estado do período
   const [periodo, setPeriodo] = useState(dayjs().format("YYYY-MM"));
@@ -581,11 +583,13 @@ export default function Financeiro() {
               <Select
                 placeholder="Selecione um paciente"
                 allowClear
-                options={pacientes.map((p) => ({
-                  label: p.nomePaciente,
-                  value: p.id,
-                  key: p.id,
-                }))}
+                options={pacientes
+                  .filter((p) => p.id_usuario === currentUser?.id_usuario)
+                  .map((p) => ({
+                    label: p.nomePaciente,
+                    value: p.id,
+                    key: p.id,
+                  }))}
               />
             </Form.Item>
 
