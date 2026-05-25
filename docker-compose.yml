@@ -3,6 +3,7 @@ services:
     image: mysql:8.0
     container_name: projeto-pim-mysql
     restart: unless-stopped
+    command: --innodb-use-native-aio=0 # <--- ADICIONE ESTA LINHA
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
