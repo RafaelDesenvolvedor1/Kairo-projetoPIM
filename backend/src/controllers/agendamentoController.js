@@ -131,14 +131,20 @@ module.exports = (app) => {
                 const { id_paciente } = req.params;
                 const id_usuario = req.user.id_usuario;
 
+                console.log(`[Kairo API] Buscando agendamentos do paciente ID: ${id_paciente} para o usuário: ${id_usuario}`);
+
                 const agendamentos = await Agendamentos.findAll({
-                    where: { id_paciente, id_usuario },
+                    where: { 
+                        id_paciente: id_paciente, // Garanta que o nome desta coluna condiz com o seu banco (ex: id_paciente ou idPaciente)
+                        id_usuario: id_usuario 
+                    },
+                    include: [{ association: 'paciente', attributes: ['id', 'nomePaciente', 'email', 'telefone'] }], // Adicionado para alimentar o item.patient no front!
                     order: [['data_hora_inicio', 'ASC']]
                 });
 
                 return res.json(agendamentos);
             } catch (error) {
-                console.error('Erro ao listar agendamentos:', error);
+                console.error('Erro ao listar agendamentos por paciente:', error);
                 return res.status(500).json({ message: 'Erro ao listar agendamentos' });
             }
         },
