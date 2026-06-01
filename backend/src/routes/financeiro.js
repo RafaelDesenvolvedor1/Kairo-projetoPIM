@@ -143,7 +143,6 @@ module.exports = (app) => {
         }
 
         try {
-          // Tenta buscar trazendo as tabelas relacionadas grudadas
           const result = await Lancamento.findAll({
             where,
             include: [
@@ -168,7 +167,6 @@ module.exports = (app) => {
         } catch (assocError) {
           console.warn("⚠️ Aviso: Falha nas associações do Sequelize. Buscando dados puros para manter a estabilidade:", assocError.message);
           
-          // Busca de contingência (sem relacionamentos complexos que possam quebrar no Sequelize)
           const fallbackResult = await Lancamento.findAll({
             where,
             order: [['data_lancamento', 'DESC']],
@@ -198,7 +196,6 @@ module.exports = (app) => {
           return res.status(500).json({ msg: "Model Lancamento indefinido no backend" });
         }
 
-        // Criar lançamento pai
         const lancamento = await Lancamento.create({
           id_usuario,
           id_paciente: id_paciente || null,
@@ -212,7 +209,6 @@ module.exports = (app) => {
           quantidade_parcelas: quantidade_parcelas || 1,
         });
 
-        // Gravação das parcelas baseado no payload do Front-end
         if (forma_pagamento === 'Parcelado' && prestacoes && prestacoes.length > 0) {
           const parcelasMapeadas = prestacoes.map((p) => ({
             id_lancamento: lancamento.id_lancamento,
@@ -233,7 +229,6 @@ module.exports = (app) => {
         }
 
         try {
-          // Tenta responder com a estrutura completa e suas parcelas
           const lancamentoComParcelas = await Lancamento.findByPk(lancamento.id_lancamento, {
             include: [{ model: Parcelalancamento, as: 'parcelas', required: false }],
           });
@@ -242,9 +237,6 @@ module.exports = (app) => {
 
         } catch (fetchError) {
           console.warn("⚠️ Aviso: Falha ao incluir parcelas no retorno do POST, enviando o objeto base salvo:", fetchError.message);
-          
-          // Se a associação falhar, enviamos o objeto base recém-criado com status 201 (Created)
-          // Isso impede que o Front-end receba status 500 e exiba o toast de erro!
           return res.status(201).json(lancamento);
         }
 
@@ -254,35 +246,27 @@ module.exports = (app) => {
     });
 
   /**
-   * GET /lancamentos/:id - Buscar lançamento específico
+   * FUNÇÃO CORRIGIDA: GET /lancamentos/:id - Buscar lançamento específico por ID
    */
   app
-    .route('/lancamentos')
+    .route('/lancamentos/:id')
     .all(app.auth.authenticate())
     .get(async (req, res) => {
       try {
         const id_usuario = req.user.id_usuario;
-        const { mes } = req.query;
-
-        const where = { id_usuario };
-
-        if (mes && /^\d{4}-\d{2}$/.test(mes)) {
-          const [ano, mês] = mes.split('-');
-          const dataInicio = `${ano}-${mês}-01`;
-          const dataFim = new Date(ano, mês, 0).toISOString().split('T')[0];
-          where.data_lancamento = {
-            [Op.between]: [dataInicio, dataFim],
-          };
-        }
+        const { id } = req.params; // Resgata corretamente o ID vindo da URL
 
         if (!Lancamento) {
           return res.status(500).json({ msg: "Model de Lançamento não carregado." });
         }
 
-        // Tenta buscar trazendo as tabelas relacionadas com os codinomes exatos do Sequelize
         try {
-          const result = await Lancamento.findAll({
-            where,
+          // Realiza a busca unitária (findOne) pelo ID primário filtrando pelo dono do registro
+          const result = await Lancamento.findOne({
+            where: { 
+              id_lancamento: id, 
+              id_usuario 
+            },
             include: [
               {
                 model: Pacientes,
@@ -296,18 +280,23 @@ module.exports = (app) => {
                 attributes: ['id_parcela', 'numero_parcela', 'data_vencimento', 'valor_parcela', 'status'],
                 required: false
               },
-            ],
-            order: [['data_lancamento', 'DESC']],
+            ]
           });
           
-          return res.json(result || []);
+          if (result) {
+            return res.json(result);
+          } else {
+            return res.sendStatus(404);
+          }
 
         } catch (assocError) {
-          console.warn("⚠️ Código de contingência ativado. Tentando variação de codinome de associação para o model Pacientes:", assocError.message);
+          console.warn("⚠️ Código de contingência ativado no GET por ID. Fallback por association:", assocError.message);
           
-          // Fallback inteligente caso o Sequelize prefira a busca direta baseada em Strings ou chaves implícitas
-          const fallbackResult = await Lancamento.findAll({
-            where,
+          const fallbackResult = await Lancamento.findOne({
+            where: { 
+              id_lancamento: id, 
+              id_usuario 
+            },
             include: [
               {
                 association: 'paciente',
@@ -318,21 +307,24 @@ module.exports = (app) => {
                 association: 'parcelas',
                 required: false
               }
-            ],
-            order: [['data_lancamento', 'DESC']],
+            ]
           });
           
-          return res.json(fallbackResult || []);
+          if (fallbackResult) {
+            return res.json(fallbackResult);
+          } else {
+            return res.sendStatus(404);
+          }
         }
 
       } catch (err) {
-        console.error("Erro fatal ao buscar lançamentos:", err);
-        return res.status(500).json({ msg: err.message, data: [] });
+        console.error("Erro fatal ao buscar lançamento por ID:", err);
+        return res.status(500).json({ msg: err.message });
       }
     });
 
   /**
-   * PUT /lancamentos/:id - Atualizar lançamento (Dar Baixa / Alterar Status)
+   * PUT /lancamentos/:id - Atualizar lançamento
    */
   app
     .route('/lancamentos/:id')
@@ -341,7 +333,7 @@ module.exports = (app) => {
       try {
         const id_usuario = req.user.id_usuario;
         const { id } = req.params;
-        const { status, data_pagamento } = req.body;
+        const { status, data_pagamento, categoria, tipo, valor, descricao, data_lancamento } = req.body;
 
         const lancamento = await Lancamento.findOne({
           where: { id_lancamento: id, id_usuario },
@@ -349,7 +341,14 @@ module.exports = (app) => {
 
         if (!lancamento) return res.sendStatus(404);
 
+        // Permite a atualização completa dos campos modificados no front-end
         if (status) lancamento.status = status;
+        if (categoria) lancamento.categoria = categoria;
+        if (tipo) lancamento.tipo = tipo;
+        if (valor) lancamento.valor = valor;
+        if (descricao !== undefined) lancamento.descricao = descricao;
+        if (data_lancamento) lancamento.data_lancamento = data_lancamento;
+
         await lancamento.save();
 
         if (data_pagamento && lancamento.forma_pagamento === 'Parcelado') {

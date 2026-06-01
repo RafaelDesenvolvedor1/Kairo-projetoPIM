@@ -13,7 +13,6 @@ import ViewPacientes from "./ViewPacientes";
 import ViewLista from "./ViewLista";
 import ViewGrid from "./ViewGrid";
 
-// icons
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
@@ -34,14 +33,11 @@ export default function Financeiro() {
   const [form] = Form.useForm();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [view, setView] = useState("lista"); // "pacientes", "lista", "grid"
+  const [view, setView] = useState("lista"); 
   const messageApi = useMessage();
   const currentUser = authService.getCurrentUser();
 
-  // Estado do período
   const [periodo, setPeriodo] = useState(dayjs().format("YYYY-MM"));
-
-  // Dados
   const [lancamentos, setLancamentos] = useState([]);
   const [pacientes, setPacientes] = useState([]);
   const [consolidado, setConsolidado] = useState({
@@ -54,9 +50,7 @@ export default function Financeiro() {
   const [tipo, setTipo] = useState("RECEITA");
   const [categoria, setCategoria] = useState("");
   const [formaPagamento, setFormaPagamento] = useState("À vista");
-  const [prestacoes, setPrestacoes] = useState([
-    { data_vencimento: null, valor_parcela: 0 },
-  ]);
+  const [prestacoes, setPrestacoes] = useState([{ data_vencimento: null, valor_parcela: 0 }]);
   const [selectedPacienteId, setSelectedPacienteId] = useState(null);
   const [filterTipo, setFilterTipo] = useState("Todos");
   const [filterStatus, setFilterStatus] = useState("Todos");
@@ -67,14 +61,12 @@ export default function Financeiro() {
     DESPESA: ["Despesa Fixa", "Despesa em prestação"],
   };
 
-  // Carregar dados iniciais
   useEffect(() => {
     carregarPacientes();
     carregarLancamentos();
     carregarConsolidado();
   }, []);
 
-  // Recarregar lançamentos quando período muda
   useEffect(() => {
     carregarLancamentos();
     carregarConsolidado();
@@ -94,7 +86,6 @@ export default function Financeiro() {
       messageApi.error(resultado.message);
     }
   };
-
 
   const carregarLancamentos = async () => {
     setLoading(true);
@@ -135,40 +126,23 @@ export default function Financeiro() {
     form.resetFields();
   };
 
-  const handleNovoLancamento = async (valores) => {
-    setLoading(true);
-    const resultado = await financeirosService.createLancamento(valores);
-    if (resultado.success) {
-      messageApi.success("Lançamento criado com sucesso!");
-      form.resetFields();
-      setTipo("RECEITA");
-      setCategoria("");
-      setFormaPagamento("À vista");
-      setPrestacoes([{ data_vencimento: null, valor_parcela: 0 }]);
-      setOpen(false);
-      carregarLancamentos();
-      carregarConsolidado();
-    } else {
-      messageApi.error(resultado.message);
-    }
-    setLoading(false);
-  };
-
   const mostraFormaPagamento =
     tipo === "RECEITA" || (tipo === "DESPESA" && categoria === "Despesa em prestação");
   const isParcelado = formaPagamento === "Parcelado" && mostraFormaPagamento;
 
   useEffect(() => {
-    setCategoria("");
-    setFormaPagamento("À vista");
-    setPrestacoes([{ data_vencimento: null, valor_parcela: 0 }]);
-    form.setFieldsValue({
-      categoria: undefined,
-      forma_pagamento: "À vista",
-      valor: undefined,
-      data_lancamento: undefined,
-    });
-  }, [tipo, form]);
+    if (!editingLancamentoId) {
+      setCategoria("");
+      setFormaPagamento("À vista");
+      setPrestacoes([{ data_vencimento: null, valor_parcela: 0 }]);
+      form.setFieldsValue({
+        categoria: undefined,
+        forma_pagamento: "À vista",
+        valor: undefined,
+        data_lancamento: undefined,
+      });
+    }
+  }, [tipo, form, editingLancamentoId]);
 
   useEffect(() => {
     if (categoria === "Despesa Fixa") {
@@ -182,10 +156,7 @@ export default function Financeiro() {
     const novaData = ultimaPrestacao?.data_vencimento
       ? dayjs(ultimaPrestacao.data_vencimento).add(1, "month")
       : dayjs();
-    setPrestacoes([
-      ...prestacoes,
-      { data_vencimento: novaData, valor_parcela: 0 },
-    ]);
+    setPrestacoes([...prestacoes, { data_vencimento: novaData, valor_parcela: 0 }]);
   };
 
   const removerPrestacao = (index) => {
@@ -202,29 +173,26 @@ export default function Financeiro() {
 
   const handleFinishFinanceiro = async (values) => {
     let payload = {
-      ...values,
-      tipo,
-      categoria,
+      id_paciente: values.id_paciente || null,
+      tipo: tipo,
+      categoria: categoria,
+      descricao: values.descricao || '',
       forma_pagamento: isParcelado ? "Parcelado" : "À vista",
       quantidade_parcelas: isParcelado ? prestacoes.length : 1,
+      valor: values.valor,
       data_lancamento: values.data_lancamento
         ? values.data_lancamento.format("YYYY-MM-DD")
         : dayjs().format("YYYY-MM-DD"),
     };
 
     if (isParcelado) {
-      const todasPreenchidas = prestacoes.every(
-        (p) => p.data_vencimento && p.valor_parcela > 0
-      );
+      const todasPreenchidas = prestacoes.every((p) => p.data_vencimento && p.valor_parcela > 0);
       if (!todasPreenchidas) {
         messageApi.error("Por favor, preencha todas as prestações com data e valor");
         return;
       }
 
-      const valorTotal = prestacoes.reduce(
-        (acc, p) => acc + parseFloat(p.valor_parcela || 0),
-        0
-      );
+      const valorTotal = prestacoes.reduce((acc, p) => acc + parseFloat(p.valor_parcela || 0), 0);
 
       payload = {
         ...payload,
@@ -243,7 +211,7 @@ export default function Financeiro() {
     if (editingLancamentoId) {
       const resultado = await financeirosService.updateLancamento(editingLancamentoId, payload);
       if (resultado.success) {
-        messageApi.success("Lançamento actualizado com sucesso!");
+        messageApi.success("Lançamento atualizado com sucesso!");
       } else {
         messageApi.error(resultado.message || "Erro ao atualizar lançamento");
         setLoading(false);
@@ -302,9 +270,7 @@ export default function Financeiro() {
     } else {
       setPrestacoes([
         {
-          data_vencimento: lancamento.data_lancamento
-            ? dayjs(lancamento.data_lancamento)
-            : null,
+          data_vencimento: lancamento.data_lancamento ? dayjs(lancamento.data_lancamento) : null,
           valor_parcela: parseFloat(lancamento.valor || 0),
         },
       ]);
@@ -317,9 +283,7 @@ export default function Financeiro() {
       descricao: lancamento.descricao,
       forma_pagamento: lancamento.forma_pagamento || "À vista",
       valor: lancamento.valor ? parseFloat(lancamento.valor) : undefined,
-      data_lancamento: lancamento.data_lancamento
-        ? dayjs(lancamento.data_lancamento)
-        : undefined,
+      data_lancamento: lancamento.data_lancamento ? dayjs(lancamento.data_lancamento) : undefined,
     });
     setOpen(true);
   };
@@ -393,13 +357,24 @@ export default function Financeiro() {
     return items;
   })();
 
+  // Funções globais de formatação para reaproveitamento nos inputs monetários
+  const moedaFormatter = (value) => {
+    if (!value) return "";
+    const partes = value.toString().split(".");
+    partes[0] = partes[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    return partes.join(",");
+  };
+
+  const moedaParser = (value) => {
+    if (!value) return "";
+    return value
+      .replace(/\s?R\$\s?|(\.*)/g, "") // Limpa o prefixo e remove pontos de milhar
+      .replace(",", "."); // Transforma a vírgula decimal em ponto para o estado do JS
+  };
+
   return (
     <Space direction="vertical" style={{ width: "100%", padding: "0 20px" }}>
-      {/* Cards de Consolidação */}
-      <Space
-        direction="horizontal"
-        style={{ width: "100%", overflowX: "auto" }}
-      >
+      <Space direction="horizontal" style={{ width: "100%", overflowX: "auto" }}>
         <CardFinancas
           color="#D35050"
           title="Despesas"
@@ -442,10 +417,8 @@ export default function Financeiro() {
         />
       </Space>
 
-      {/* Seletor de Período */}
       <CardPeriodo periodo={periodo} onPeriodoChange={setPeriodo} />
 
-      {/* Controles Superiores */}
       <Space direction="horizontal" style={{ width: "100%", justifyContent: "space-between" }}>
         <Segmented
           value={view}
@@ -503,7 +476,6 @@ export default function Financeiro() {
         </Space>
       </Space>
 
-      {/* Views */}
       {lancamentos.length === 0 && !loading ? (
         <Container>
           <EmptyComponent
@@ -571,7 +543,6 @@ export default function Financeiro() {
         </>
       )}
 
-      {/* Drawer Novo Lançamento */}
       <MyDrawer open={open} onClose={onClose} title={editingLancamentoId ? "Editar Lançamento" : "Novo Lançamento"} width={600}>
         <FormStyled
           form={form}
@@ -580,23 +551,19 @@ export default function Financeiro() {
           onFinish={handleFinishFinanceiro}
         >
           <Spin spinning={loading}>
-          <Form.Item name="id_paciente" label="Selecionar Paciente (Opcional)">
-            <Select
-              placeholder="Selecione um paciente"
-              allowClear
-              showSearch
-              optionFilterProp="label"
-              options={pacientes
-                // 1. Filtra garantindo que o paciente pertence ao Lucas Vieira (id_usuario: 1)
-                // .filter((p) => String(p.id_usuario || p.usuario_id || p.userId) === String(currentUser?.id_usuario))
-                // 2. Mapeia os campos exatos que vieram do banco de dados
-                .map((p) => ({
-                  label: p.nomePaciente || p.nome || p.nome_paciente, // Tenta todas as variações de nome
-                  value: p.id || p.id_paciente,                       // Tenta as variações de ID primário
+            <Form.Item name="id_paciente" label="Selecionar Paciente (Opcional)">
+              <Select
+                placeholder="Selecione um paciente"
+                allowClear
+                showSearch
+                optionFilterProp="label"
+                options={pacientes.map((p) => ({
+                  label: p.nomePaciente || p.nome || p.nome_paciente, 
+                  value: p.id || p.id_paciente,                       
                   key: p.id || p.id_paciente,
                 }))}
-            />
-           </Form.Item>
+              />
+            </Form.Item>
 
             <Form.Item name="tipo" label="Tipo" initialValue="RECEITA">
               <Radio.Group onChange={(e) => setTipo(e.target.value)} value={tipo}>
@@ -650,10 +617,13 @@ export default function Financeiro() {
                 >
                   <InputNumber
                     placeholder="0,00"
-                    prefix="R$"
+                    prefix="R$ "
                     step={0.01}
                     precision={2}
                     style={{ width: "100%" }}
+                    decimalSeparator=","
+                    formatter={moedaFormatter}
+                    parser={moedaParser}
                   />
                 </Form.Item>
                 <Form.Item
@@ -668,62 +638,38 @@ export default function Financeiro() {
 
             {isParcelado && (
               <div style={{ marginBottom: 24 }}>
-                <label
-                  style={{
-                    fontWeight: 700,
-                    display: "block",
-                    marginBottom: 16,
-                  }}
-                >
+                <label style={{ fontWeight: 700, display: "block", marginBottom: 16 }}>
                   Prestações
                 </label>
                 {prestacoes.map((prestacao, index) => (
                   <div
                     key={index}
-                    style={{
-                      display: "flex",
-                      gap: 12,
-                      alignItems: "flex-end",
-                      marginBottom: 12,
-                    }}
+                    style={{ display: "flex", gap: 12, alignItems: "flex-end", marginBottom: 12 }}
                   >
                     <div style={{ flex: 1 }}>
-                      <label
-                        style={{
-                          fontSize: "0.85em",
-                          display: "block",
-                          marginBottom: 4,
-                        }}
-                      >
+                      <label style={{ fontSize: "0.85em", display: "block", marginBottom: 4 }}>
                         Vencimento #{index + 1}
                       </label>
                       <DatePicker
                         value={prestacao.data_vencimento}
-                        onChange={(date) =>
-                          atualizarPrestacao(index, "data_vencimento", date)
-                        }
+                        onChange={(date) => atualizarPrestacao(index, "data_vencimento", date)}
                         style={{ width: "100%" }}
                       />
                     </div>
                     <div style={{ flex: 1 }}>
-                      <label
-                        style={{
-                          fontSize: "0.85em",
-                          display: "block",
-                          marginBottom: 4,
-                        }}
-                      >
+                      <label style={{ fontSize: "0.85em", display: "block", marginBottom: 4 }}>
                         Valor #{index + 1}
                       </label>
                       <InputNumber
                         value={prestacao.valor_parcela}
-                        onChange={(val) =>
-                          atualizarPrestacao(index, "valor_parcela", val)
-                        }
-                        prefix="R$"
+                        onChange={(val) => atualizarPrestacao(index, "valor_parcela", val)}
+                        prefix="R$ "
                         step={0.01}
                         precision={2}
                         style={{ width: "100%" }}
+                        decimalSeparator=","
+                        formatter={moedaFormatter}
+                        parser={moedaParser}
                       />
                     </div>
                     {prestacoes.length > 1 && (
