@@ -44,6 +44,16 @@ export const getPacientes = async () => {
   }
 };
 
+export const getPacienteById = async (id) => {
+  try {
+    const res = await api.get(`/pacientes/${id}`);
+    return res.data;
+  } catch (err) {
+    console.error(`Erro ao buscar paciente com ID ${id}:`, err);
+    throw err;
+  }
+};
+
 export const postPacientes = async (novoPaciente) => {
   try {
     const res = await api.post("/pacientes", novoPaciente);

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Calendar, Drawer, Form, Input, TimePicker, Select, Spin, notification } from "antd";
 import dayjs from "dayjs";
 import ButtonSubmit from '../../components/ButtonSubmit';
-import agendamentosService from '../../services/agendamentosService'; // Ajustado de agendamentosService para agendamentoService
+import agendamentosService from '../../services/agendamentosService'; 
 import pacientesService from '../../services/pacientesService';
 import locaisService from '../../services/locaisService';
 import servicosService from '../../services/servicosService';
@@ -132,7 +132,7 @@ export default function Agendamentos() {
               duration: 4
             });
           } else {
-            messageApi.success('Agendamento updated com sucesso!');
+            messageApi.success('Agendamento atualizado com sucesso!');
           }
 
           const pacienteSelecionado = pacientes.find(p => p.id === parseInt(values.id_paciente));
@@ -195,7 +195,22 @@ export default function Agendamentos() {
     }
   };
 
-  // Renderizar eventos no calendário com as suas classes CSS originais
+  // Retorna o sufixo CSS correto de acordo com o status vindo do ENUM do Banco
+  const getDotClassByStatus = (status) => {
+    const statusFormatado = status ? status.toLowerCase() : 'agendado';
+    switch (statusFormatado) {
+      case 'concluido':
+      case 'atendido':
+        return 'dot-concluido'; // Verde
+      case 'cancelado':
+        return 'dot-cancelado'; // Vermelho
+      case 'agendado':
+      default:
+        return 'dot-agendado'; // Azul
+    }
+  };
+
+  // Renderizar eventos no calendário
   const dateCellRender = (date) => {
     const eventosDoDia = agendamentos.filter((e) =>
       dayjs(e.data_hora_inicio).isSame(date, "day")
@@ -206,12 +221,12 @@ export default function Agendamentos() {
     return (
       <div className="event-cell">
         {eventosDoDia.map((evento, index) => {
-          // Extrai e formata o horário local de início usando o DayJS
           const horaFormatada = dayjs(evento.data_hora_inicio).format("HH:mm");
           
           return (
             <div key={index} className="event-item" onClick={() => handleEdit(evento)}>
-              <span className="dot" />
+              {/* Adicionada a classe dinâmica de cor aqui */}
+              <span className={`dot ${getDotClassByStatus(evento.status)}`} />
               <span className="event-name">
                 <strong>{horaFormatada}</strong> - {evento.paciente?.nomePaciente || 'Sem paciente'}
               </span>

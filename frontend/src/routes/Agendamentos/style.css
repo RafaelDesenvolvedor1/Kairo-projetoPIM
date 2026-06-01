@@ -25,3 +25,16 @@
   border-radius: 50%;
   flex-shrink: 0;
 }
+
+/* Modificadores para a bolinha de status */
+.dot.dot-agendado {
+  background-color: #1890ff; /* Azul clássico */
+}
+
+.dot.dot-concluido {
+  background-color: #52c41a; /* Verde sucesso */
+}
+
+.dot.dot-cancelado {
+  background-color: #ff4d4f; /* Vermelho erro */
+}

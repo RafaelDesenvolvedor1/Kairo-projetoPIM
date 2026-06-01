@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Typography, List, Space, Tag, Empty, Spin, Divider, Button, Popconfirm, Tooltip, message } from 'antd'; 
+import { Typography, List, Space, Tag, Empty, Spin, Divider, Button, Popconfirm, Tooltip, message, Modal, DatePicker, TimePicker, Form } from 'antd'; 
 import { ClockCircleOutlined, SwapRightOutlined, EditOutlined, DeleteOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import { AgendaContainer, AppointmentItem, DateBadge, AppointmentInfo } from './styles';
 import agendamentosService from '../../../../services/agendamentosService';
@@ -12,6 +12,11 @@ const { Text } = Typography;
 export default function TabAgenda({ idPaciente }) {
   const [loading, setLoading] = useState(false);
   const [appointments, setAppointments] = useState([]);
+  
+  // States para o Modal de Edição
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
+  const [form] = Form.useForm();
 
   const fetchAppointments = async () => {
     if (!idPaciente) {
@@ -26,7 +31,6 @@ export default function TabAgenda({ idPaciente }) {
       const resultado = await agendamentosService.listarAgendamentosPorPaciente(idPaciente);
       
       if (resultado.success) {
-        // Mapeia e trata os dados vindos da API
         const dadosFormatados = (resultado.data || []).map(agendamento => {
           const inicio = dayjs(agendamento.data_hora_inicio);
           const fim = dayjs(agendamento.data_hora_fim);
@@ -50,7 +54,6 @@ export default function TabAgenda({ idPaciente }) {
       }
     } catch (error) {
       console.error("Erro ao carregar agenda:", error);
-      // CORREÇÃO: Alterado de messageApi.error para o message.error do AntD estático importado
       message.error('Erro ao processar agenda do paciente');
     } finally {
       setLoading(false);
@@ -61,13 +64,12 @@ export default function TabAgenda({ idPaciente }) {
     fetchAppointments();
   }, [idPaciente]);
 
-  // Função para lidar com a exclusão
   const handleDeletar = async (id) => {
     try {
       const resultado = await agendamentosService.deletarAgendamento(id);
       if (resultado.success) {
         message.success("Agendamento excluído com sucesso!");
-        fetchAppointments(); // Recarrega a listagem local
+        fetchAppointments();
       } else {
         message.error("Erro ao excluir: " + resultado.message);
       }
@@ -77,16 +79,68 @@ export default function TabAgenda({ idPaciente }) {
     }
   };
 
-  // Funções para ações futuras
+  // Abre o modal carregando os horários atuais do agendamento
   const handleEditar = (item) => {
-    message.info(`Editar agendamento #${item.id} (Disparar Drawer ou Modal da Agenda geral)`);
+    setEditingItem(item);
+    
+    const dataHoraInicio = dayjs(item.raw.data_hora_inicio);
+    const dataHoraFim = dayjs(item.raw.data_hora_fim);
+
+    form.setFieldsValue({
+      data: dataHoraInicio,
+      horarios: [dataHoraInicio, dataHoraFim]
+    });
+    
+    setIsEditModalOpen(true);
   };
 
-  const handleMudarStatus = (id, novoStatus) => {
-    message.info(`Mudar status do agendamento #${id} para '${novoStatus}' (Em breve)`);
+  // Salva a alteração da data e hora efetuada no Modal
+  const handleSalvarEdicao = async (values) => {
+    try {
+      const dataFormatada = values.data.format('YYYY-MM-DD');
+      const horaInicioFormatada = values.horarios[0].format('HH:mm:ss');
+      const horaFimFormatada = values.horarios[1].format('HH:mm:ss');
+
+      const data_hora_inicio = `${dataFormatada} ${horaInicioFormatada}`;
+      const data_hora_fim = `${dataFormatada} ${horaFimFormatada}`;
+
+      const resultado = await agendamentosService.atualizarAgendamento(editingItem.id, {
+        data_hora_inicio,
+        data_hora_fim
+      });
+
+      if (resultado.success) {
+        message.success("Horário do agendamento atualizado!");
+        setIsEditModalOpen(false);
+        fetchAppointments();
+      } else {
+        message.error("Não foi possível reagendar: " + resultado.message);
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar horário:", error);
+      message.error("Erro ao processar a alteração de horário");
+    }
   };
 
-  // Define as cores das tags baseado no status
+  // Atualiza o ENUM de status diretamente no banco de dados ('concluido' ou 'cancelado')
+  const handleMudarStatus = async (id, novoStatus) => {
+    try {
+      const resultado = await agendamentosService.atualizarAgendamento(id, {
+        status: novoStatus
+      });
+
+      if (resultado.success) {
+        message.success(`Agendamento atualizado para ${novoStatus.toUpperCase()}!`);
+        fetchAppointments();
+      } else {
+        message.error("Erro ao mudar status: " + resultado.message);
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar status:", error);
+      message.error("Erro ao tentar atualizar o status");
+    }
+  };
+
   const getTagColor = (status) => {
     switch (status) {
       case 'CONCLUIDO': return 'success';
@@ -134,14 +188,14 @@ export default function TabAgenda({ idPaciente }) {
               </AppointmentInfo>
             </div>
 
-            {/* Seção de Botões de Ação */}
+            {/* Seção de Botões de Ação Dinâmicos */}
             <Space size="middle" style={{ paddingRight: '10px' }}>
               <Tooltip title="Marcar como Atendido">
                 <Button 
                   type="text" 
                   shape="circle" 
-                  icon={<CheckCircleOutlined style={{ color: '#52c41a' }} />} 
-                  disabled 
+                  icon={<CheckCircleOutlined style={{ color: item.status === 'CONCLUIDO' ? '#bfbfbf' : '#52c41a' }} />} 
+                  disabled={item.status === 'CONCLUIDO' || item.status === 'CANCELADO'} 
                   onClick={() => handleMudarStatus(item.id, 'concluido')}
                 />
               </Tooltip>
@@ -150,8 +204,8 @@ export default function TabAgenda({ idPaciente }) {
                 <Button 
                   type="text" 
                   shape="circle" 
-                  icon={<CloseCircleOutlined style={{ color: '#ff4d4f' }} />} 
-                  disabled 
+                  icon={<CloseCircleOutlined style={{ color: item.status === 'CANCELADO' ? '#bfbfbf' : '#ff4d4f' }} />} 
+                  disabled={item.status === 'CANCELADO' || item.status === 'CONCLUIDO'} 
                   onClick={() => handleMudarStatus(item.id, 'cancelado')}
                 />
               </Tooltip>
@@ -185,6 +239,40 @@ export default function TabAgenda({ idPaciente }) {
           </AppointmentItem>
         )}
       />
+
+      {/* Modal de Edição de Data e Horário */}
+      <Modal
+        title="Reagendar Atendimento"
+        open={isEditModalOpen}
+        onOk={() => form.submit()}
+        onCancel={() => setIsEditModalOpen(false)}
+        okText="Salvar Alterações"
+        cancelText="Voltar"
+        destroyOnClose
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleSalvarEdicao}
+          style={{ marginTop: '20px' }}
+        >
+          <Form.Item
+            name="data"
+            label="Selecione o Dia"
+            rules={[{ required: true, message: 'Selecione a data do atendimento!' }]}
+          >
+            <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
+          </Form.Item>
+
+          <Form.Item
+            name="horarios"
+            label="Horário de Início e Fim"
+            rules={[{ required: true, message: 'Defina os horários do atendimento!' }]}
+          >
+            <TimePicker.RangePicker style={{ width: '100%' }} format="HH:mm" order={true} />
+          </Form.Item>
+        </Form>
+      </Modal>
     </AgendaContainer>
   );
 }

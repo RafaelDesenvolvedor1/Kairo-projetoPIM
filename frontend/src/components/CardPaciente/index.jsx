@@ -10,7 +10,7 @@ import { PacienteContext } from "../../context/PacienteContext";
 import { useMessage } from "../../context/MessageProvider";
 import ButtonSecoundary from "../ButtonSecoundary";
 import ButtonWhatsapp from "../ButtonWhatsapp";
-import { Link } from "react-router"; // Importação do Link conforme seu uso
+import { Link } from "react-router"; 
 
 export default function CardPaciente({
   grid,
@@ -148,68 +148,68 @@ export default function CardPaciente({
             <Row gutter={[12, 12]}>
               {/* Perfil - Key 1 */}
               <Col span={24}>
-                <Link to={`/pacientes/dates`} state={{ activeTab: '1' }} style={{ width: '100%' }}>
+                <Link to={`/pacientes/dates`} state={{ activeTab: '1', id: paciente.id, paciente }} style={{ width: '100%' }}>
                   <ButtonSecoundary style={{ width: '100%' }}>Perfil</ButtonSecoundary>
                 </Link>
               </Col>
 
               {/* Instrumentos - Key 2 */}
               <Col span={12}>
-                <Link to={`/pacientes/dates`} state={{ activeTab: '2' }} style={{ width: '100%' }}>
+                <Link to={`/pacientes/dates`} state={{ activeTab: '2', id: paciente.id, paciente }} style={{ width: '100%' }}>
                   <ButtonSecoundary style={{ width: '100%' }}>Instrumentos</ButtonSecoundary>
                 </Link>
               </Col>
 
               {/* Prontuário - Key 3 */}
               <Col span={12}>
-                <Link to={`/pacientes/dates`} state={{ activeTab: '3' }} style={{ width: '100%' }}>
+                <Link to={`/pacientes/dates`} state={{ activeTab: '3', id: paciente.id, paciente }} style={{ width: '100%' }}>
                   <ButtonSecoundary style={{ width: '100%' }}>Prontuário</ButtonSecoundary>
                 </Link>
               </Col>
 
               {/* Anotações de Sessão - Key 4 */}
               <Col span={12}>
-                <Link to={`/pacientes/dates`} state={{ activeTab: '4' }} style={{ width: '100%' }}>
+                <Link to={`/pacientes/dates`} state={{ activeTab: '4', id: paciente.id, paciente }} style={{ width: '100%' }}>
                   <ButtonSecoundary style={{ width: '100%' }}>Anotações de Sessão</ButtonSecoundary>
                 </Link>
               </Col>
 
               {/* Agenda - Key 5 */}
               <Col span={12}>
-                <Link to={`/pacientes/dates`} state={{ activeTab: '5' }} style={{ width: '100%' }}>
+                <Link to={`/pacientes/dates`} state={{ activeTab: '5', id: paciente.id, paciente }} style={{ width: '100%' }}>
                   <ButtonSecoundary style={{ width: '100%' }}>Agenda</ButtonSecoundary>
                 </Link>
               </Col>
 
               {/* Financeiro - Key 6 */}
               <Col span={12}>
-                <Link to={`/pacientes/dates`} state={{ activeTab: '6' }} style={{ width: '100%' }}>
+                <Link to={`/pacientes/dates`} state={{ activeTab: '6', id: paciente.id, paciente }} style={{ width: '100%' }}>
                   <ButtonSecoundary style={{ width: '100%' }}>Financeiro</ButtonSecoundary>
                 </Link>
               </Col>
 
               {/* Diário de Bordo - Key 7 */}
               <Col span={12}>
-                <Link to={`/pacientes/dates`} state={{ activeTab: '7' }} style={{ width: '100%' }}>
+                <Link to={`/pacientes/dates`} state={{ activeTab: '7', id: paciente.id, paciente }} style={{ width: '100%' }}>
                   <ButtonSecoundary style={{ width: '100%' }}>Diário de Bordo</ButtonSecoundary>
                 </Link>
               </Col>
 
               {/* Documentos - Key 8 */}
               <Col span={12}>
-                <Link to={`/pacientes/dates`} state={{ activeTab: '8' }} style={{ width: '100%' }}>
+                <Link to={`/pacientes/dates`} state={{ activeTab: '8', id: paciente.id, paciente }} style={{ width: '100%' }}>
                   <ButtonSecoundary style={{ width: '100%' }}>Documentos</ButtonSecoundary>
                 </Link>
               </Col>
 
               {/* Anexos - Key 9 */}
               <Col span={12}>
-                <Link to={`/pacientes/dates`} state={{ activeTab: '9' }} style={{ width: '100%' }}>
+                <Link to={`/pacientes/dates`} state={{ activeTab: '9', id: paciente.id, paciente }} style={{ width: '100%' }}>
                   <ButtonSecoundary style={{ width: '100%' }}>Anexos</ButtonSecoundary>
                 </Link>
               </Col>
 
-              {/* Arquivar - Funcionalidade extra */}
+              {/* Arquivar */}
               <Col span={12}>
                 <ButtonSecoundary style={{ width: '100%' }}>Arquivar</ButtonSecoundary>
               </Col>
