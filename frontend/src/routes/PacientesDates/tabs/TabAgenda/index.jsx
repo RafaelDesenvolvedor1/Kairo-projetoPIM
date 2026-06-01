@@ -97,22 +97,37 @@ export default function TabAgenda({ idPaciente }) {
   // Salva a alteração da data e hora efetuada no Modal
   const handleSalvarEdicao = async (values) => {
     try {
-      const dataFormatada = values.data.format('YYYY-MM-DD');
-      const horaInicioFormatada = values.horarios[0].format('HH:mm:ss');
-      const horaFimFormatada = values.horarios[1].format('HH:mm:ss');
+      const novaDataBase = values.data;
+      const seletorInicio = values.horarios[0];
+      const seletorFim = values.horarios[1];
 
-      const data_hora_inicio = `${dataFormatada} ${horaInicioFormatada}`;
-      const data_hora_fim = `${dataFormatada} ${horaFimFormatada}`;
+      // CORREÇÃO DEFINITIVA: Clona e utiliza o método .set() para isolar os estados e evitar mutações cruzadas do objeto original
+      const dataHoraInicioObjeto = novaDataBase
+        .clone()
+        .set('hour', seletorInicio.hour())
+        .set('minute', seletorInicio.minute())
+        .set('second', 0);
 
-      const resultado = await agendamentosService.atualizarAgendamento(editingItem.id, {
-        data_hora_inicio,
-        data_hora_fim
-      });
+      const dataHoraFimObjeto = novaDataBase
+        .clone()
+        .set('hour', seletorFim.hour())
+        .set('minute', seletorFim.minute())
+        .set('second', 0);
+
+      // Gera as strings no padrão ISO esperado pelas queries do Sequelize no backend
+      const payload = {
+        data_hora_inicio: dataHoraInicioObjeto.toISOString(),
+        data_hora_fim: dataHoraFimObjeto.toISOString(),
+      };
+
+      console.log("Kairo TabAgenda Reagendamento - Payload construído com sucesso:", payload);
+
+      const resultado = await agendamentosService.atualizarAgendamento(editingItem.id, payload);
 
       if (resultado.success) {
         message.success("Horário do agendamento atualizado!");
         setIsEditModalOpen(false);
-        fetchAppointments();
+        fetchAppointments(); 
       } else {
         message.error("Não foi possível reagendar: " + resultado.message);
       }
@@ -122,7 +137,6 @@ export default function TabAgenda({ idPaciente }) {
     }
   };
 
-  // Atualiza o ENUM de status diretamente no banco de dados ('concluido' ou 'cancelado')
   const handleMudarStatus = async (id, novoStatus) => {
     try {
       const resultado = await agendamentosService.atualizarAgendamento(id, {
@@ -188,7 +202,6 @@ export default function TabAgenda({ idPaciente }) {
               </AppointmentInfo>
             </div>
 
-            {/* Seção de Botões de Ação Dinâmicos */}
             <Space size="middle" style={{ paddingRight: '10px' }}>
               <Tooltip title="Marcar como Atendido">
                 <Button 
@@ -240,7 +253,6 @@ export default function TabAgenda({ idPaciente }) {
         )}
       />
 
-      {/* Modal de Edição de Data e Horário */}
       <Modal
         title="Reagendar Atendimento"
         open={isEditModalOpen}
