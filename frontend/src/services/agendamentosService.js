@@ -147,6 +147,44 @@ const agendamentosService = {
         message: error.response?.data?.message || error.message 
       };
     }
+  },
+
+  /**
+   * Obter o total de agendamentos concluídos no Mês Corrente
+   * @returns {object} Resposta com { total_agendamentos: N }
+   */
+  async obterTotalMesCorrente() {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/agendamentos/indicadores/mes-corrente`, {
+        headers: getAuthHeader(),
+      });
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('Erro ao obter total do mês corrente:', error);
+      return { 
+        success: false, 
+        message: error.response?.data?.message || error.message 
+      };
+    }
+  },
+
+  /**
+   * Obter o total de agendamentos concluídos no Mês Anterior
+   * @returns {object} Resposta com { total_agendamentos: N }
+   */
+  async obterTotalMesAnterior() {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/agendamentos/indicadores/mes-anterior`, {
+        headers: getAuthHeader(),
+      });
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('Erro ao obter total do mês anterior:', error);
+      return { 
+        success: false, 
+        message: error.response?.data?.message || error.message 
+      };
+    }
   }
 };
 

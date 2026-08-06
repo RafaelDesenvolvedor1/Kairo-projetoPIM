@@ -12,7 +12,7 @@ module.exports = (app) => {
             await agendamentoController.listAll(req, res);
         });
 
-    // NOVA ROTA: Listar agendamentos específicos do dia de hoje
+    // Listar agendamentos do dia de hoje
     app
         .route('/agendamentos/hoje')
         .all(app.auth.authenticate())
@@ -20,7 +20,31 @@ module.exports = (app) => {
             await agendamentoController.listToday(req, res);
         });
 
-    // Operações com agendamento específico (GET, PUT, DELETE)
+    // Contagem de agendamentos do mês corrente
+    app
+        .route('/agendamentos/indicadores/mes-corrente')
+        .all(app.auth.authenticate())
+        .get(async (req, res) => {
+            await agendamentoController.countSchedulesMonthCurrent(req, res);
+        });
+
+    // Contagem de agendamentos do mês anterior
+    app
+        .route('/agendamentos/indicadores/mes-anterior')
+        .all(app.auth.authenticate())
+        .get(async (req, res) => {
+            await agendamentoController.countSchedulesMonthPrevious(req, res);
+        });
+
+    // Listar agendamentos por paciente
+    app
+        .route('/agendamentos/paciente/:id_paciente')
+        .all(app.auth.authenticate())
+        .get(async (req, res) => {
+            await agendamentoController.listByPaciente(req, res);
+        });
+
+    // Operações com agendamento específico (GET, PUT, DELETE por ID)
     app
         .route('/agendamentos/:id')
         .all(app.auth.authenticate())
@@ -32,13 +56,5 @@ module.exports = (app) => {
         })
         .delete(async (req, res) => {
             await agendamentoController.delete(req, res);
-        });
-
-    // Listar agendamentos por paciente
-    app
-        .route('/agendamentos/paciente/:id_paciente')
-        .all(app.auth.authenticate())
-        .get(async (req, res) => {
-            await agendamentoController.listByPaciente(req, res);
         });
 };

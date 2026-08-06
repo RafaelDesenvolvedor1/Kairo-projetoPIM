@@ -28,16 +28,25 @@ const formatarHora = (dataString) => {
 
 export default function Home() {
   const [agendamentosHoje, setAgendamentosHoje] = useState([]);
+  const [sessoesMesAtual, setSessoesMesAtual] = useState(0);
+  const [sessoesMesPassado, setSessoesMesPassado] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const buscarAgendamentosDoDia = async () => {
+    const carregarDadosDashboard = async () => {
       try {
-        // Consumindo o método centralizado do seu Service
-        const resultado = await agendamentosService.listarAgendamentosHoje();
+        setLoading(true);
 
-        if (resultado.success && resultado.data) {
-          const dadosFormatados = resultado.data.map(agendamento => {
+        // Dispara as requisições em paralelo para ganhar performance na página
+        const [resHoje, resMesAtual, resMesPassado] = await Promise.all([
+          agendamentosService.listarAgendamentosHoje(),
+          agendamentosService.obterTotalMesCorrente(),
+          agendamentosService.obterTotalMesAnterior()
+        ]);
+
+        // 1. Processa agendamentos de hoje
+        if (resHoje.success && resHoje.data) {
+          const dadosFormatados = resHoje.data.map(agendamento => {
             const nomePaciente = agendamento.paciente?.nomePaciente || 'Paciente';
             return {
               iniciais: getIniciais(nomePaciente),
@@ -47,14 +56,25 @@ export default function Home() {
           });
           setAgendamentosHoje(dadosFormatados);
         }
+
+        // 2. Processa indicador do Mês Atual
+        if (resMesAtual.success && resMesAtual.data) {
+          setSessoesMesAtual(resMesAtual.data.total_agendamentos);
+        }
+
+        // 3. Processa indicador do Mês Anterior
+        if (resMesPassado.success && resMesPassado.data) {
+          setSessoesMesPassado(resMesPassado.data.total_agendamentos);
+        }
+
       } catch (error) {
-        console.error("Erro ao processar agendamentos na Home:", error);
+        console.error("Erro ao carregar dados do Dashboard:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    buscarAgendamentosDoDia();
+    carregarDadosDashboard();
   }, []);
 
   const dashCards = [
@@ -81,23 +101,25 @@ export default function Home() {
         <Col>
           <SummaryCard>
             <IconCircle><FaHeart /></IconCircle>
-            <Label>Pacientes atendidos</Label>
-            <Value>0</Value>
-            <Text type="secondary" style={{ fontSize: '10px' }}>mês passado: 0</Text>
+            <Label>Pacientes atendidos esse mês</Label>
+            <Value>{sessoesMesAtual}</Value>
+            <Text type="secondary" style={{ fontSize: '10px' }}>mês passado: {sessoesMesPassado}</Text>
           </SummaryCard>
         </Col>
-        <Col>
+
+        {/* <Col>
           <SummaryCard>
             <IconCircle><FaCheck /></IconCircle>
-            <Label>Sessões realizadas</Label>
-            <Value>0</Value>
-            <Text type="secondary" style={{ fontSize: '10px' }}>mês passado: 0</Text>
+            <Label>Sessões realizadas este mês</Label>
+            <Value>{sessoesMesAtual}</Value>
+            <Text type="secondary" style={{ fontSize: '10px' }}>mês passado: {sessoesMesPassado}</Text>
           </SummaryCard>
-        </Col>
+        </Col> */}
+
         <Col>
           <SummaryCard>
             <IconCircle><FaDollarSign /></IconCircle>
-            <Label>Faturamento</Label>
+            <Label>Faturamento este mês</Label>
             <Value>R$ 0,00</Value>
             <Text type="secondary" style={{ fontSize: '10px' }}>mês passado: R$ 0,00</Text>
           </SummaryCard>

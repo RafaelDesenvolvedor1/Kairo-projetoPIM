@@ -89,19 +89,13 @@ module.exports = (app) => {
             }
         },
 
-        // NOVO MÉTODO: Listar agendamentos apenas do dia atual
-      listToday: async (req, res) => {
+        listToday: async (req, res) => {
             try {
                 const id_usuario = req.user.id_usuario;
 
-                // 1. Pega a data atual no fuso de Brasília (Ex: "2026-05-24")
                 const dataLocal = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
-
-                // 2. Define o limite inicial: meia-noite do dia atual local
                 const startOfDay = `${dataLocal} 00:00:00`;
 
-                // 3. Define o limite final: avança para o dia seguinte e joga o limite até as 03:00 AM
-                // Isso compensa o fuso de -3h de Brasília e captura agendamentos do final da noite
                 const amanha = new Date();
                 amanha.setDate(amanha.getDate() + 1);
                 const dataAmanhaLocal = amanha.toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
@@ -126,6 +120,58 @@ module.exports = (app) => {
             }
         },
 
+        countSchedulesMonthCurrent: async (req, res) => {
+            try {
+                const id_usuario = req.user.id_usuario;
+
+                const dataAtual = new Date();
+                const inicioMesCorrente = new Date(dataAtual.getFullYear(), dataAtual.getMonth(), 1);
+                const inicioProximoMes = new Date(dataAtual.getFullYear(), dataAtual.getMonth() + 1, 1);
+
+                const total = await Agendamentos.count({
+                    where: {
+                        id_usuario,
+                        status: 'concluido',
+                        data_hora_fim: {
+                            [Op.gte]: inicioMesCorrente,
+                            [Op.lt]: inicioProximoMes
+                        }
+                    }
+                });
+
+                return res.json({ total_agendamentos: total });
+            } catch (error) {
+                console.error('Erro ao buscar dados do mês corrente:', error);
+                return res.status(500).json({ message: 'Erro ao buscar dados do mês corrente' });
+            }
+        },
+
+        countSchedulesMonthPrevious: async (req, res) => {
+            try {
+                const id_usuario = req.user.id_usuario;
+
+                const dataAtual = new Date();
+                const inicioMesAnterior = new Date(dataAtual.getFullYear(), dataAtual.getMonth() - 1, 1);
+                const inicioMesCorrente = new Date(dataAtual.getFullYear(), dataAtual.getMonth(), 1);
+
+                const total = await Agendamentos.count({
+                    where: {
+                        id_usuario,
+                        status: 'concluido',
+                        data_hora_fim: {
+                            [Op.gte]: inicioMesAnterior,
+                            [Op.lt]: inicioMesCorrente
+                        }
+                    }
+                });
+
+                return res.json({ total_agendamentos: total });
+            } catch (error) {
+                console.error('Erro ao buscar dados do mês anterior:', error);
+                return res.status(500).json({ message: 'Erro ao buscar dados do mês anterior' });
+            }
+        },
+
         listByPaciente: async (req, res) => {
             try {
                 const { id_paciente } = req.params;
@@ -135,10 +181,10 @@ module.exports = (app) => {
 
                 const agendamentos = await Agendamentos.findAll({
                     where: { 
-                        id_paciente: id_paciente, // Garanta que o nome desta coluna condiz com o seu banco (ex: id_paciente ou idPaciente)
+                        id_paciente: id_paciente,
                         id_usuario: id_usuario 
                     },
-                    include: [{ association: 'paciente', attributes: ['id', 'nomePaciente', 'email', 'telefone'] }], // Adicionado para alimentar o item.patient no front!
+                    include: [{ association: 'paciente', attributes: ['id', 'nomePaciente', 'email', 'telefone'] }],
                     order: [['data_hora_inicio', 'ASC']]
                 });
 
