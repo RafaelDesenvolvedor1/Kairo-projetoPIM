@@ -39,6 +39,207 @@ module.exports = (app) => {
     });
 
   /**
+   * GET /lancamentos/faturamento - Retorna o faturamento do mês atual e do mês anterior
+   */
+  app
+    .route('/lancamentos/faturamento')
+    .all(app.auth.authenticate())
+    .get(async (req, res) => {
+      try {
+        const id_usuario = req.user.id_usuario;
+        const { mes } = req.query;
+
+        let anoRef, mesRef;
+
+        if (mes && /^\d{4}-\d{2}$/.test(mes)) {
+          const parts = mes.split('-');
+          anoRef = parseInt(parts[0], 10);
+          mesRef = parseInt(parts[1], 10) - 1; // Mês em JavaScript é base 0 (0-11)
+        } else {
+          const hoje = new Date();
+          anoRef = hoje.getFullYear();
+          mesRef = hoje.getMonth();
+        }
+
+        // Mês Referência (Início e Fim)
+        const dataInicioAtual = `${anoRef}-${String(mesRef + 1).padStart(2, '0')}-01`;
+        const dataFimAtual = new Date(anoRef, mesRef + 1, 0).toISOString().split('T')[0];
+
+        // Mês Anterior (Início e Fim)
+        const dataAnteriorObj = new Date(anoRef, mesRef - 1, 1);
+        const anoAnt = dataAnteriorObj.getFullYear();
+        const mesAnt = dataAnteriorObj.getMonth();
+        const dataInicioAnterior = `${anoAnt}-${String(mesAnt + 1).padStart(2, '0')}-01`;
+        const dataFimAnterior = new Date(anoAnt, mesAnt + 1, 0).toISOString().split('T')[0];
+
+        const safeSumReceitas = async (dataInicio, dataFim) => {
+          try {
+            if (!Lancamento) return 0;
+            const value = await Lancamento.sum('valor', {
+              where: {
+                id_usuario,
+                tipo: 'RECEITA',
+                status: 'Pago',
+                data_lancamento: {
+                  [Op.between]: [dataInicio, dataFim],
+                },
+              },
+            });
+            if (value === null || value === undefined) return 0;
+            const n = parseFloat(value);
+            return Number.isNaN(n) ? 0 : n;
+          } catch (e) {
+            console.error('Erro ao somar faturamento:', e);
+            return 0;
+          }
+        };
+
+        const faturamentoAtual = await safeSumReceitas(dataInicioAtual, dataFimAtual);
+        const faturamentoAnterior = await safeSumReceitas(dataInicioAnterior, dataFimAnterior);
+
+        // Cálculo de variação percentual em relação ao mês anterior
+        let comparativoPercentual = 0;
+        if (faturamentoAnterior > 0) {
+          comparativoPercentual = ((faturamentoAtual - faturamentoAnterior) / faturamentoAnterior) * 100;
+        } else if (faturamentoAtual > 0) {
+          comparativoPercentual = 100; // Crescimento de 100% se o mês anterior foi 0
+        }
+
+        return res.json({
+          faturamentoAtual,
+          faturamentoAnterior,
+          comparativoPercentual: parseFloat(comparativoPercentual.toFixed(2)),
+          periodoAtual: `${anoRef}-${String(mesRef + 1).padStart(2, '0')}`,
+          periodoAnterior: `${anoAnt}-${String(mesAnt + 1).padStart(2, '0')}`,
+        });
+
+      } catch (err) {
+        return handleError(res, err);
+      }
+    });
+
+  /**
+   * GET /lancamentos/grafico-historico - Retorna o histórico de receitas e despesas dos últimos 6 meses
+   */
+  app
+    .route('/lancamentos/grafico-historico')
+    .all(app.auth.authenticate())
+    .get(async (req, res) => {
+      try {
+        const id_usuario = req.user.id_usuario;
+
+        // 1. Calcula a data de início (6 meses atrás a partir do primeiro dia do mês)
+        const hoje = new Date();
+        const dataInicioObj = new Date(hoje.getFullYear(), hoje.getMonth() - 5, 1);
+        const dataInicioStr = dataInicioObj.toISOString().split('T')[0];
+
+        // 2. Busca todos os lançamentos pagos do período para o usuário
+        const lancamentos = await Lancamento.findAll({
+          where: {
+            id_usuario,
+            status: 'Pago',
+            data_lancamento: {
+              [Op.gte]: dataInicioStr
+            }
+          },
+          attributes: ['tipo', 'valor', 'data_lancamento'],
+          order: [['data_lancamento', 'ASC']]
+        });
+
+        // 3. Monta a estrutura base dos últimos 6 meses vazios
+        const mesesNomes = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+        const historicoMap = {};
+
+        for (let i = 5; i >= 0; i--) {
+          const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+          const chave = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+          historicoMap[chave] = {
+            mesAno: chave,
+            label: `${mesesNomes[d.getMonth()]}/${String(d.getFullYear()).slice(-2)}`,
+            receitas: 0,
+            despesas: 0
+          };
+        }
+
+        // 4. Popula os dados agregados dos lançamentos
+        lancamentos.forEach(l => {
+          if (!l.data_lancamento) return;
+          
+          const chave = String(l.data_lancamento).substring(0, 7); 
+
+          if (historicoMap[chave]) {
+            const valor = parseFloat(l.valor) || 0;
+            if (l.tipo === 'RECEITA') {
+              historicoMap[chave].receitas += valor;
+            } else if (l.tipo === 'DESPESA') {
+              historicoMap[chave].despesas += valor;
+            }
+          }
+        });
+
+        const dadosGrafico = Object.values(historicoMap);
+
+        return res.json(dadosGrafico);
+      } catch (err) {
+        return handleError(res, err);
+      }
+    });
+
+  /**
+   * GET /lancamentos/em-aberto - Retorna os lançamentos pendentes ordenados por data de vencimento
+   */
+  app
+    .route('/lancamentos/em-aberto')
+    .all(app.auth.authenticate())
+    .get(async (req, res) => {
+      try {
+        const id_usuario = req.user.id_usuario;
+        const limitParam = parseInt(req.query.limit, 10) || 5;
+
+        if (!Lancamento) {
+          return res.status(500).json({ msg: "Model de Lançamento não carregado." });
+        }
+
+        try {
+          const pendentes = await Lancamento.findAll({
+            where: {
+              id_usuario,
+              status: 'Pendente'
+            },
+            include: [
+              {
+                model: Pacientes,
+                as: 'paciente',
+                attributes: ['id', 'nomePaciente'],
+                required: false
+              }
+            ],
+            order: [['data_lancamento', 'ASC']],
+            limit: limitParam
+          });
+
+          return res.json(pendentes);
+        } catch (assocError) {
+          console.warn("⚠️ Aviso: Fallback acionado na busca de lançamentos em aberto:", assocError.message);
+          
+          const fallbackPendentes = await Lancamento.findAll({
+            where: {
+              id_usuario,
+              status: 'Pendente'
+            },
+            order: [['data_lancamento', 'ASC']],
+            limit: limitParam
+          });
+
+          return res.json(fallbackPendentes);
+        }
+
+      } catch (err) {
+        return handleError(res, err);
+      }
+    });
+
+  /**
    * GET /lancamentos/consolidado/periodo - Consolidação de dados para cards
    */
   app
@@ -246,7 +447,7 @@ module.exports = (app) => {
     });
 
   /**
-   * FUNÇÃO CORRIGIDA: GET /lancamentos/:id - Buscar lançamento específico por ID
+   * GET /lancamentos/:id - Buscar lançamento específico por ID
    */
   app
     .route('/lancamentos/:id')
@@ -254,14 +455,13 @@ module.exports = (app) => {
     .get(async (req, res) => {
       try {
         const id_usuario = req.user.id_usuario;
-        const { id } = req.params; // Resgata corretamente o ID vindo da URL
+        const { id } = req.params;
 
         if (!Lancamento) {
           return res.status(500).json({ msg: "Model de Lançamento não carregado." });
         }
 
         try {
-          // Realiza a busca unitária (findOne) pelo ID primário filtrando pelo dono do registro
           const result = await Lancamento.findOne({
             where: { 
               id_lancamento: id, 
@@ -341,7 +541,6 @@ module.exports = (app) => {
 
         if (!lancamento) return res.sendStatus(404);
 
-        // Permite a atualização completa dos campos modificados no front-end
         if (status) lancamento.status = status;
         if (categoria) lancamento.categoria = categoria;
         if (tipo) lancamento.tipo = tipo;

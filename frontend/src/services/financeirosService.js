@@ -23,6 +23,48 @@ const financeirosService = {
     }
   },
 
+  // Get faturamento do mês atual e mês anterior
+  async getFaturamento(mes = null) {
+    try {
+      const params = mes ? { mes } : {};
+      const response = await axios.get(`${API_BASE_URL}/lancamentos/faturamento`, {
+        params,
+        headers: getAuthHeader(),
+      });
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('Erro ao buscar faturamento:', error);
+      return { success: false, message: error.response?.data?.msg || error.message };
+    }
+  },
+
+  // Get histórico de receitas e despesas dos últimos 6 meses para o gráfico
+  async getHistoricoGrafico() {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/lancamentos/grafico-historico`, {
+        headers: getAuthHeader(),
+      });
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('Erro ao buscar histórico do gráfico:', error);
+      return { success: false, message: error.response?.data?.msg || error.message };
+    }
+  },
+
+  // Get lançamentos pendentes/em aberto
+  async getLancamentosEmAberto(limit = 5) {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/lancamentos/em-aberto`, {
+        params: { limit },
+        headers: getAuthHeader(),
+      });
+      return { success: true, data: response.data };
+    } catch (error) {
+      console.error('Erro ao buscar lançamentos em aberto:', error);
+      return { success: false, message: error.response?.data?.msg || error.message };
+    }
+  },
+
   // Get consolidado por período
   async getConsolidado(mes = null) {
     try {
