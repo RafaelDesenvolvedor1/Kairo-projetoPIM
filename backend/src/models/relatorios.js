@@ -16,9 +16,10 @@ module.exports = (app) => {
             type: DataTypes.INTEGER,
             allowNull: false,
         },
+        // MUDANÇA: Opcional (allowNull: true), permite criar Laudos/Atestados sem um agendamento vinculado
         id_agendamento: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
         },
         data_criacao: {
             type: DataTypes.DATE,
@@ -26,12 +27,13 @@ module.exports = (app) => {
             defaultValue: DataTypes.NOW,
         },
         conteudo: {
-            type: DataTypes.TEXT('long'), // Mapeia LONGTEXT
+            type: DataTypes.TEXT('long'),
             allowNull: false,
         },
         tipo: {
-            type: DataTypes.ENUM('sessao', 'laudo'),
+            type: DataTypes.ENUM('sessao', 'laudo', 'atestado', 'encaminhamento'),
             allowNull: false,
+            defaultValue: 'sessao',
         },
     }, {
         tableName: 'Relatorios',

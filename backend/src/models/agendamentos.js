@@ -27,12 +27,12 @@ module.exports = (app) => {
         status: {
             type: DataTypes.ENUM('agendado', 'concluido', 'cancelado'),
             allowNull: false,
+            defaultValue: 'agendado',
         },
         observacoes: {
             type: DataTypes.TEXT,
             allowNull: true,
         },
-        // Nova coluna para vincular o agendamento ao evento do Google Agenda
         google_event_id: {
             type: DataTypes.STRING(255),
             allowNull: true,
@@ -45,7 +45,8 @@ module.exports = (app) => {
     Agendamentos.associate = (models) => {
         Agendamentos.belongsTo(models.Pacientes, { foreignKey: 'id_paciente', as: 'paciente' });
         Agendamentos.belongsTo(models.User, { foreignKey: 'id_usuario', as: 'usuario' });
-        Agendamentos.hasMany(models.Relatorios, { foreignKey: 'id_agendamento', as: 'relatorios' });
+        // 1 Agendamento concluído pode possuir 1 relatório/anotação de evolução associado
+        Agendamentos.hasOne(models.Relatorios, { foreignKey: 'id_agendamento', as: 'relatorio' });
     };
 
     return Agendamentos;
