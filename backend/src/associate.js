@@ -22,146 +22,80 @@ module.exports = (app) => {
   } = models;
 
   if (Users) {
-    if (Logs_Acesso) {
-      Users.hasMany(Logs_Acesso, { foreignKey: 'id_usuario', as: 'logs' });
-    }
-    if (Financeiro) {
-      Users.hasMany(Financeiro, { foreignKey: 'id_usuario', as: 'financeiro' });
-    }
-    if (Relatorios) {
-      Users.hasMany(Relatorios, { foreignKey: 'id_usuario', as: 'relatorios' });
-    }
-    if (Fichas_Clinicas) {
-      Users.hasMany(Fichas_Clinicas, { foreignKey: 'id_usuario', as: 'fichas_clinicas' });
-    }
-    if (Agendamentos) {
-      Users.hasMany(Agendamentos, { foreignKey: 'id_usuario', as: 'agendamentos' });
-    }
-    if (Pacientes) {
-      Users.hasMany(Pacientes, { foreignKey: 'id_usuario', as: 'pacientes' });
-    }
-    if (Locais) {
-      Users.hasMany(Locais, { foreignKey: 'id_usuario', as: 'locais' });
-    }
-    if (Servicos) {
-      Users.hasMany(Servicos, { foreignKey: 'id_usuario', as: 'servicos' });
-    }
-    if (Horarios) {
-      Users.hasMany(Horarios, { foreignKey: 'id_usuario', as: 'horarios' });
-    }
-    if (Equipe) {
-      Users.hasOne(Equipe, { foreignKey: 'id_usuario', as: 'equipe_perfil' });
-    }
+    if (Logs_Acesso) Users.hasMany(Logs_Acesso, { foreignKey: 'id_usuario', as: 'logs' });
+    if (Financeiro) Users.hasMany(Financeiro, { foreignKey: 'id_usuario', as: 'financeiro' });
+    if (Relatorios) Users.hasMany(Relatorios, { foreignKey: 'id_usuario', as: 'relatorios' });
+    if (Fichas_Clinicas) Users.hasMany(Fichas_Clinicas, { foreignKey: 'id_usuario', as: 'fichas_clinicas' });
+    if (Agendamentos) Users.hasMany(Agendamentos, { foreignKey: 'id_usuario', as: 'agendamentos' });
+    if (Pacientes) Users.hasMany(Pacientes, { foreignKey: 'id_usuario', as: 'pacientes' });
+    if (Locais) Users.hasMany(Locais, { foreignKey: 'id_usuario', as: 'locais' });
+    if (Servicos) Users.hasMany(Servicos, { foreignKey: 'id_usuario', as: 'servicos' });
+    if (Horarios) Users.hasMany(Horarios, { foreignKey: 'id_usuario', as: 'horarios' });
+    if (Equipe) Users.hasOne(Equipe, { foreignKey: 'id_usuario', as: 'equipe_perfil' });
   }
 
   if (Pacientes) {
-    if (Users) {
-      Pacientes.belongsTo(Users, { foreignKey: 'id_usuario', as: 'usuario' });
-    }
-    if (Agendamentos) {
-      Pacientes.hasMany(Agendamentos, { foreignKey: 'id_paciente', as: 'agendamentos' });
-    }
-    if (Relatorios) {
-      Pacientes.hasMany(Relatorios, { foreignKey: 'id_paciente', as: 'relatorios' });
-    }
-    if (Fichas_Clinicas) {
-      Pacientes.hasMany(Fichas_Clinicas, { foreignKey: 'id_paciente', as: 'fichas_clinicas' });
-    }
+    if (Users) Pacientes.belongsTo(Users, { foreignKey: 'id_usuario', as: 'usuario' });
+    if (Agendamentos) Pacientes.hasMany(Agendamentos, { foreignKey: 'id_paciente', as: 'agendamentos' });
+    if (Relatorios) Pacientes.hasMany(Relatorios, { foreignKey: 'id_paciente', as: 'relatorios' });
+    if (Fichas_Clinicas) Pacientes.hasMany(Fichas_Clinicas, { foreignKey: 'id_paciente', as: 'fichas_clinicas' });
   }
 
   if (Agendamentos) {
-    if (Pacientes) {
-      Agendamentos.belongsTo(Pacientes, { foreignKey: 'id_paciente', as: 'paciente' });
-    }
-    if (Users) {
-      Agendamentos.belongsTo(Users, { foreignKey: 'id_usuario', as: 'usuario' });
-    }
-    if (Relatorios) {
-      Agendamentos.hasMany(Relatorios, { foreignKey: 'id_agendamento', as: 'relatorios' });
-    }
+    if (Pacientes) Agendamentos.belongsTo(Pacientes, { foreignKey: 'id_paciente', as: 'paciente' });
+    if (Users) Agendamentos.belongsTo(Users, { foreignKey: 'id_usuario', as: 'usuario' });
+    if (Locais) Agendamentos.belongsTo(Locais, { foreignKey: 'id_local', as: 'local' });
+    if (Servicos) Agendamentos.belongsTo(Servicos, { foreignKey: 'id_servico', as: 'servico' });
+    if (Relatorios) Agendamentos.hasOne(Relatorios, { foreignKey: 'id_agendamento', as: 'relatorio' });
   }
 
   if (Relatorios) {
-    if (Pacientes) {
-      Relatorios.belongsTo(Pacientes, { foreignKey: 'id_paciente', as: 'paciente' });
-    }
-    if (Users) {
-      Relatorios.belongsTo(Users, { foreignKey: 'id_usuario', as: 'usuario' });
-    }
-    if (Agendamentos) {
-      Relatorios.belongsTo(Agendamentos, { foreignKey: 'id_agendamento', as: 'agendamento' });
-    }
-    if (Anexos) {
-      Relatorios.hasMany(Anexos, { foreignKey: 'id_relatorio', as: 'anexos' });
-    }
+    if (Pacientes) Relatorios.belongsTo(Pacientes, { foreignKey: 'id_paciente', as: 'paciente' });
+    if (Users) Relatorios.belongsTo(Users, { foreignKey: 'id_usuario', as: 'usuario' });
+    if (Agendamentos) Relatorios.belongsTo(Agendamentos, { foreignKey: 'id_agendamento', as: 'agendamento' });
+    if (Anexos) Relatorios.hasMany(Anexos, { foreignKey: 'id_relatorio', as: 'anexos' });
   }
 
   if (Anexos) {
-    if (Relatorios) {
-      Anexos.belongsTo(Relatorios, { foreignKey: 'id_relatorio', as: 'relatorio' });
-    }
-    if (Fichas_Clinicas) {
-      Anexos.belongsTo(Fichas_Clinicas, { foreignKey: 'id_ficha', as: 'ficha_clinica' });
-    }
+    if (Relatorios) Anexos.belongsTo(Relatorios, { foreignKey: 'id_relatorio', as: 'relatorio' });
+    if (Fichas_Clinicas) Anexos.belongsTo(Fichas_Clinicas, { foreignKey: 'id_ficha', as: 'ficha_clinica' });
   }
 
   if (Fichas_Clinicas) {
-    if (Pacientes) {
-      Fichas_Clinicas.belongsTo(Pacientes, { foreignKey: 'id_paciente', as: 'paciente' });
-    }
-    if (Users) {
-      Fichas_Clinicas.belongsTo(Users, { foreignKey: 'id_usuario', as: 'usuario' });
-    }
-    if (Anexos) {
-      Fichas_Clinicas.hasMany(Anexos, { foreignKey: 'id_ficha', as: 'anexos' });
-    }
+    if (Pacientes) Fichas_Clinicas.belongsTo(Pacientes, { foreignKey: 'id_paciente', as: 'paciente' });
+    if (Users) Fichas_Clinicas.belongsTo(Users, { foreignKey: 'id_usuario', as: 'usuario' });
+    if (Anexos) Fichas_Clinicas.hasMany(Anexos, { foreignKey: 'id_ficha', as: 'anexos' });
   }
 
-  if (Financeiro) {
+  if (Financeiro && Users) {
     Financeiro.belongsTo(Users, { foreignKey: 'id_usuario', as: 'usuario' });
   }
 
   if (Lancamento) {
-    if (Users) {
-      Lancamento.belongsTo(Users, { foreignKey: 'id_usuario', as: 'usuario' });
-    }
-    if (Pacientes) {
-      Lancamento.belongsTo(Pacientes, { foreignKey: 'id_paciente', as: 'paciente' });
-    }
-    if (Parcelalancamento) {
-      Lancamento.hasMany(Parcelalancamento, { foreignKey: 'id_lancamento', as: 'parcelas' });
-    }
+    if (Users) Lancamento.belongsTo(Users, { foreignKey: 'id_usuario', as: 'usuario' });
+    if (Pacientes) Lancamento.belongsTo(Pacientes, { foreignKey: 'id_paciente', as: 'paciente' });
+    if (Parcelalancamento) Lancamento.hasMany(Parcelalancamento, { foreignKey: 'id_lancamento', as: 'parcelas' });
   }
 
-  if (Parcelalancamento) {
-    if (Lancamento) {
-      Parcelalancamento.belongsTo(Lancamento, { foreignKey: 'id_lancamento', as: 'lancamento' });
-    }
+  if (Parcelalancamento && Lancamento) {
+    Parcelalancamento.belongsTo(Lancamento, { foreignKey: 'id_lancamento', as: 'lancamento' });
   }
 
-  if (Logs_Acesso) {
+  if (Logs_Acesso && Users) {
     Logs_Acesso.belongsTo(Users, { foreignKey: 'id_usuario', as: 'usuario' });
   }
 
-  if (Equipe) {
+  if (Equipe && Users) {
     Equipe.belongsTo(Users, { foreignKey: 'id_usuario', as: 'usuario' });
   }
 
   if (Horarios) {
-    if (Users) {
-      Horarios.belongsTo(Users, { foreignKey: 'id_usuario', as: 'usuario' });
-    }
-    if (Locais) {
-      Horarios.belongsTo(Locais, { foreignKey: 'id_local', as: 'local' });
-    }
+    if (Users) Horarios.belongsTo(Users, { foreignKey: 'id_usuario', as: 'usuario' });
+    if (Locais) Horarios.belongsTo(Locais, { foreignKey: 'id_local', as: 'local' });
   }
 
   if (Locais) {
-    if (Users) {
-      Locais.belongsTo(Users, { foreignKey: 'id_usuario', as: 'usuario' });
-    }
-    if (Horarios) {
-      Locais.hasMany(Horarios, { foreignKey: 'id_local', as: 'horarios' });
-    }
+    if (Users) Locais.belongsTo(Users, { foreignKey: 'id_usuario', as: 'usuario' });
+    if (Horarios) Locais.hasMany(Horarios, { foreignKey: 'id_local', as: 'horarios' });
   }
 };

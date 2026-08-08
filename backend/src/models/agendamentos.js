@@ -16,6 +16,14 @@ module.exports = (app) => {
             type: DataTypes.INTEGER,
             allowNull: false,
         },
+        id_local: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+        },
+        id_servico: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+        },
         data_hora_inicio: {
             type: DataTypes.DATE,
             allowNull: false,
@@ -43,10 +51,11 @@ module.exports = (app) => {
     });
 
     Agendamentos.associate = (models) => {
-        Agendamentos.belongsTo(models.Pacientes, { foreignKey: 'id_paciente', as: 'paciente' });
-        Agendamentos.belongsTo(models.User, { foreignKey: 'id_usuario', as: 'usuario' });
-        // 1 Agendamento concluído pode possuir 1 relatório/anotação de evolução associado
-        Agendamentos.hasOne(models.Relatorios, { foreignKey: 'id_agendamento', as: 'relatorio' });
+        Agendamentos.belongsTo(models.Pacientes || models.pacientes, { foreignKey: 'id_paciente', as: 'paciente' });
+        Agendamentos.belongsTo(models.Users || models.users || models.User, { foreignKey: 'id_usuario', as: 'usuario' });
+        Agendamentos.belongsTo(models.Locais || models.locais, { foreignKey: 'id_local', as: 'local' });
+        Agendamentos.belongsTo(models.Servicos || models.servicos, { foreignKey: 'id_servico', as: 'servico' });
+        Agendamentos.hasOne(models.Relatorios || models.relatorios, { foreignKey: 'id_agendamento', as: 'relatorio' });
     };
 
     return Agendamentos;

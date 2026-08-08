@@ -1,10 +1,10 @@
 const { Op } = require('sequelize');
 
 module.exports = (app) => {
-  // Ajuste de chaves do Consign para carregar as models corretamente
-  const Relatorios = app.models.relatorios || app.models.Relatorios;
-  const Agendamentos = app.models.agendamentos || app.models.Agendamentos;
-  const Anexos = app.models.anexos || app.models.Anexos;
+  const Relatorios = app.models?.relatorios || app.db?.models?.relatorios || app.models?.Relatorios || app.db?.models?.Relatorios;
+  const Agendamentos = app.models?.agendamentos || app.db?.models?.agendamentos || app.models?.Agendamentos || app.db?.models?.Agendamentos;
+  const Anexos = app.models?.anexos || app.db?.models?.anexos || app.models?.Anexos || app.db?.models?.Anexos;
+  const Servicos = app.models?.servicos || app.db?.models?.servicos || app.models?.Servicos || app.db?.models?.Servicos;
 
   const relatoriosController = {
     /**
@@ -18,14 +18,21 @@ module.exports = (app) => {
         const prontuario = await Relatorios.findAll({
           where: { 
             id_paciente,
-            id_usuario // Garante que o profissional só vê dados dos próprios pacientes
+            id_usuario // Garante isolamento entre usuários
           },
           include: [
             {
               model: Agendamentos,
               as: 'agendamento',
-              attributes: ['id_agendamento', 'data_hora_inicio', 'status'],
-              required: false
+              required: false,
+              include: [
+                {
+                  model: Servicos,
+                  as: 'servico',
+                  attributes: ['id_servico', 'nome', 'modalidade'],
+                  required: false
+                }
+              ]
             },
             {
               model: Anexos,
@@ -56,7 +63,6 @@ module.exports = (app) => {
           return res.status(400).json({ msg: 'O conteúdo da anotação é obrigatório.' });
         }
 
-        // Se um id_agendamento for enviado, valida se ele existe e pertence ao usuário
         if (id_agendamento) {
           const agendamento = await Agendamentos.findOne({
             where: { id_agendamento, id_usuario }
@@ -75,7 +81,6 @@ module.exports = (app) => {
           data_criacao: new Date()
         });
 
-        // Se for uma evolução de sessão vinculada a um agendamento, atualiza o status do agendamento para concluído
         if (id_agendamento) {
           await Agendamentos.update(
             { status: 'concluido' },
@@ -97,7 +102,7 @@ module.exports = (app) => {
       try {
         const id_usuario = req.user.id_usuario;
         const { id } = req.params;
-        const { conteudo, tipo } = req.body;
+        const { conteudo, tipo, id_agendamento } = req.body;
 
         const relatorio = await Relatorios.findOne({
           where: { id_relatorio: id, id_usuario }
@@ -105,8 +110,9 @@ module.exports = (app) => {
 
         if (!relatorio) return res.sendStatus(404);
 
-        if (conteudo) relatorio.conteudo = conteudo;
-        if (tipo) relatorio.tipo = tipo;
+        if (conteudo !== undefined) relatorio.conteudo = conteudo;
+        if (tipo !== undefined) relatorio.tipo = tipo;
+        if (id_agendamento !== undefined) relatorio.id_agendamento = id_agendamento || null;
 
         await relatorio.save();
         return res.json(relatorio);
@@ -130,7 +136,6 @@ module.exports = (app) => {
 
         if (!relatorio) return res.sendStatus(404);
 
-        // Remove os anexos vinculados fisicamente ou logicamente se houver lógica de upload
         if (Anexos) {
           await Anexos.destroy({ where: { id_relatorio: id } });
         }

@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Typography, Tree, Space, Button, Tag, Tooltip, 
-  Collapse, Form, Popover, Checkbox, Divider, Modal, message, Spin, Empty, Select, Dropdown, Popconfirm 
+  Collapse, Form, Popover, Checkbox, Divider, Modal, message, Spin, Empty, Select, Dropdown, Popconfirm, Input 
 } from 'antd';
 import { 
   FilterOutlined, FileTextOutlined, CloudUploadOutlined, 
-  ExpandOutlined, AimOutlined, MinusSquareOutlined, 
+  ExpandOutlined, AimOutlined, 
   MoreOutlined, EditOutlined, FullscreenOutlined, 
   SaveOutlined, BoldOutlined, DeleteOutlined,
   ItalicOutlined, AlignLeftOutlined, AlignCenterOutlined, 
-  AlignRightOutlined, ShrinkOutlined, CalendarOutlined,
-  VideoCameraOutlined, UserOutlined
+  AlignRightOutlined, ShrinkOutlined, CalendarOutlined, SearchOutlined
 } from '@ant-design/icons';
 
 import { useEditor, EditorContent } from '@tiptap/react';
@@ -53,58 +52,159 @@ export default function TabNotasSessao({ idPaciente }) {
   const [activeKey, setActiveKey] = useState([]); 
   const [isAllExpanded, setIsAllExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [sessoes, setSessoes] = useState([]);
+  
+  // Base de dados
+  const [todasSessoes, setTodasSessoes] = useState([]); 
+  const [sessoesExibidas, setSessoesExibidas] = useState([]); 
+  const [treeData, setTreeData] = useState([]);
   const [agendamentosPaciente, setAgendamentosPaciente] = useState([]);
+  
+  // Estados para os Filtros
+  const [filtroServico, setFiltroServico] = useState('TODOS');
+  const [filtroOrigem, setFiltroOrigem] = useState('TODOS');
+  const [termoBusca, setTermoBusca] = useState('');
+  const [servicosDisponiveis, setServicosDisponiveis] = useState([]);
+
+  const [currentAgendamentoId, setCurrentAgendamentoId] = useState(null);
   const [currentRelatorioId, setCurrentRelatorioId] = useState(null);
   
   const [form] = Form.useForm();
 
   const editor = useEditor({
     extensions: [StarterKit, TextAlign.configure({ types: ['heading', 'paragraph'] })],
-    content: '<p>Anotações do atendimento...</p>',
+    content: '<p></p>',
     onUpdate: ({ editor }) => {
       form.setFieldsValue({ anotacao: editor.getHTML() });
     },
   });
 
-  const carregarProntuarioEAgendamentos = async () => {
+  const gerarTreeDataApenasNotas = (listaSessoes) => {
+    const mesesNomes = [
+      'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    ];
+    const mapaAnos = {};
+
+    listaSessoes.forEach((nota) => {
+      const dataStr = nota.agendamento?.data_hora_inicio || nota.data_criacao;
+      if (!dataStr) return;
+
+      const d = new Date(dataStr);
+      const ano = d.getFullYear();
+      const mesNome = mesesNomes[d.getMonth()];
+
+      if (!mapaAnos[ano]) mapaAnos[ano] = {};
+      if (!mapaAnos[ano][mesNome]) mapaAnos[ano][mesNome] = [];
+
+      mapaAnos[ano][mesNome].push(nota);
+    });
+
+    return Object.keys(mapaAnos).sort((a, b) => b - a).map((ano) => ({
+      title: ano,
+      key: `ano-${ano}`,
+      children: Object.keys(mapaAnos[ano]).map((mes) => ({
+        title: `${mes} (${mapaAnos[ano][mes].length})`,
+        key: `mes-${ano}-${mes}`,
+        notasDoMes: mapaAnos[ano][mes]
+      }))
+    }));
+  };
+
+  const carregarDadosProntuario = async () => {
     if (!idPaciente) return;
     try {
       setLoading(true);
       
       const [resRelatorios, resAgendamentos] = await Promise.all([
         relatoriosService.getProntuarioPaciente(idPaciente),
-        agendamentosService.listarAgendamentosPorPaciente ? agendamentosService.listarAgendamentosPorPaciente(idPaciente) : Promise.resolve({ success: false })
+        agendamentosService.listarAgendamentosPorPaciente(idPaciente)
       ]);
 
       if (resRelatorios.success && resRelatorios.data) {
-        const relatoriosSessao = resRelatorios.data.filter(item => item.tipo === 'sessao');
-        setSessoes(relatoriosSessao);
-        if (relatoriosSessao.length > 0) {
-          setActiveKey([String(relatoriosSessao[0].id_relatorio)]);
-        }
+        const notasRealizadas = resRelatorios.data.filter(item => item.tipo === 'sessao');
+        
+        notasRealizadas.sort((a, b) => {
+          const dataA = a.agendamento?.data_hora_inicio || a.data_criacao;
+          const dataB = b.agendamento?.data_hora_inicio || b.data_criacao;
+          return new Date(dataB) - new Date(dataA);
+        });
+
+        setTodasSessoes(notasRealizadas);
+
+        // Mapeia serviços únicos das notas para o Select do Filtro
+        const servicos = Array.from(new Set(
+          notasRealizadas
+            .map(n => n.agendamento?.servico?.nome)
+            .filter(Boolean)
+        ));
+        setServicosDisponiveis(servicos);
       }
 
       if (resAgendamentos.success && resAgendamentos.data) {
         setAgendamentosPaciente(resAgendamentos.data);
       }
     } catch (err) {
-      message.error("Erro ao carregar dados da sessão.");
+      message.error("Erro ao carregar prontuário.");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    carregarProntuarioEAgendamentos();
+    carregarDadosProntuario();
   }, [idPaciente]);
+
+  // APLICAÇÃO DOS FILTROS (Serviço, Origem e Texto de Busca)
+  useEffect(() => {
+    let filtradas = [...todasSessoes];
+
+    // 1. Filtro de Serviço
+    if (filtroServico !== 'TODOS') {
+      filtradas = filtradas.filter(n => n.agendamento?.servico?.nome === filtroServico);
+    }
+
+    // 2. Filtro de Origem
+    if (filtroOrigem === 'AGENDA') {
+      filtradas = filtradas.filter(n => !!n.id_agendamento);
+    } else if (filtroOrigem === 'AVULSO') {
+      filtradas = filtradas.filter(n => !n.id_agendamento);
+    }
+
+    // 3. Filtro por Busca de Texto
+    if (termoBusca.trim() !== '') {
+      const busca = termoBusca.toLowerCase();
+      filtradas = filtradas.filter(n => n.conteudo.toLowerCase().includes(busca));
+    }
+
+    setSessoesExibidas(filtradas);
+    setTreeData(gerarTreeDataApenasNotas(filtradas));
+
+    if (filtradas.length > 0) {
+      setActiveKey([String(filtradas[0].id_relatorio)]);
+    } else {
+      setActiveKey([]);
+    }
+  }, [filtroServico, filtroOrigem, termoBusca, todasSessoes]);
+
+  const handleSelectTreeNode = (selectedKeys, info) => {
+    const node = info.node;
+    if (node.notasDoMes && node.notasDoMes.length > 0) {
+      setSessoesExibidas(node.notasDoMes);
+      setActiveKey(node.notasDoMes.map(n => String(n.id_relatorio)));
+    } else {
+      setSessoesExibidas(todasSessoes);
+      if (todasSessoes.length > 0) {
+        setActiveKey([String(todasSessoes[0].id_relatorio)]);
+      }
+    }
+  };
 
   const onFinish = async (values) => {
     try {
       setLoading(true);
       const payload = {
         id_paciente: idPaciente,
-        id_agendamento: values.id_agendamento || null,
+        id_agendamento: values.id_agendamento || currentAgendamentoId || null,
         conteudo: values.anotacao,
         tipo: 'sessao'
       };
@@ -121,8 +221,9 @@ export default function TabNotasSessao({ idPaciente }) {
         setIsEditing(false);
         setIsModalOpen(false);
         setCurrentRelatorioId(null);
+        setCurrentAgendamentoId(null);
         form.resetFields();
-        carregarProntuarioEAgendamentos();
+        carregarDadosProntuario();
       } else {
         message.error(res.message || 'Falha ao salvar anotação.');
       }
@@ -135,6 +236,7 @@ export default function TabNotasSessao({ idPaciente }) {
 
   const handleEditItem = (item) => {
     setCurrentRelatorioId(item.id_relatorio);
+    setCurrentAgendamentoId(item.id_agendamento);
     editor?.commands.setContent(item.conteudo);
     form.setFieldsValue({ 
       anotacao: item.conteudo,
@@ -149,9 +251,7 @@ export default function TabNotasSessao({ idPaciente }) {
       const res = await relatoriosService.deleteRelatorio(idRelatorio);
       if (res.success) {
         message.success('Anotação removida com sucesso!');
-        carregarProntuarioEAgendamentos();
-      } else {
-        message.error(res.message || 'Erro ao remover anotação.');
+        carregarDadosProntuario();
       }
     } catch (err) {
       message.error('Erro ao excluir do servidor.');
@@ -164,7 +264,7 @@ export default function TabNotasSessao({ idPaciente }) {
     if (isAllExpanded) {
       setActiveKey([]); 
     } else {
-      setActiveKey(sessoes.map(s => String(s.id_relatorio))); 
+      setActiveKey(sessoesExibidas.map(s => String(s.id_relatorio))); 
     }
     setIsAllExpanded(!isAllExpanded);
   };
@@ -175,12 +275,7 @@ export default function TabNotasSessao({ idPaciente }) {
 
     const d = new Date(dataAlvo);
     return d.toLocaleDateString('pt-BR', {
-      weekday: 'long',
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
     });
   };
 
@@ -188,19 +283,93 @@ export default function TabNotasSessao({ idPaciente }) {
     <SessionContainer hideSidebar={hideSidebar}>
       <TimelineSidebar hideSidebar={hideSidebar}>
         <Title level={5}>Timeline</Title>
-        <Tree treeData={[{ title: '2026', key: '26', children: [{ title: 'Histórico de Atendimentos', key: 'atend' }] }]} />
+        {treeData.length === 0 ? (
+          <Text type="secondary" style={{ fontSize: '12px' }}>Nenhum histórico</Text>
+        ) : (
+          <Tree 
+            treeData={treeData} 
+            defaultExpandAll
+            onSelect={handleSelectTreeNode}
+          />
+        )}
       </TimelineSidebar>
 
       <ContentArea>
         <SessionHeader>
-          <Popover trigger="click" placement="bottomRight" content={(
-            <div style={{ width: 220 }}>
-              <Text strong>Filtros</Text>
-              <Divider style={{ margin: '8px 0' }} />
-              <Checkbox defaultChecked>Somente com anotação</Checkbox><br/>
-            </div>
-          )}>
-            <Button type="text" icon={<FilterOutlined />} />
+          {/* POPOVER COM OS FILTROS AVANÇADOS */}
+          <Popover 
+            trigger="click" 
+            placement="bottomRight" 
+            content={(
+              <div style={{ width: 240, padding: '4px 0' }}>
+                <Text strong>Filtrar Anotações</Text>
+                <Divider style={{ margin: '8px 0' }} />
+                
+                <Space direction="vertical" style={{ width: '100%' }} size={12}>
+                  <div>
+                    <Text type="secondary" style={{ fontSize: '12px' }}>Busca textual:</Text>
+                    <Input 
+                      placeholder="Pesquisar termo..." 
+                      prefix={<SearchOutlined />} 
+                      value={termoBusca}
+                      onChange={e => setTermoBusca(e.target.value)}
+                      allowClear
+                      size="small"
+                    />
+                  </div>
+
+                  <div>
+                    <Text type="secondary" style={{ fontSize: '12px' }}>Por Serviço:</Text>
+                    <Select 
+                      value={filtroServico} 
+                      onChange={setFiltroServico} 
+                      style={{ width: '100%' }}
+                      size="small"
+                    >
+                      <Select.Option value="TODOS">Todos os Serviços</Select.Option>
+                      {servicosDisponiveis.map(s => (
+                        <Select.Option key={s} value={s}>{s}</Select.Option>
+                      ))}
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Text type="secondary" style={{ fontSize: '12px' }}>Por Origem:</Text>
+                    <Select 
+                      value={filtroOrigem} 
+                      onChange={setFiltroOrigem} 
+                      style={{ width: '100%' }}
+                      size="small"
+                    >
+                      <Select.Option value="TODOS">Todas as Origens</Select.Option>
+                      <Select.Option value="AGENDA">Via Agenda</Select.Option>
+                      <Select.Option value="AVULSO">Anotação Avulsa</Select.Option>
+                    </Select>
+                  </div>
+
+                  {(filtroServico !== 'TODOS' || filtroOrigem !== 'TODOS' || termoBusca !== '') && (
+                    <Button 
+                      type="link" 
+                      danger 
+                      size="small" 
+                      onClick={() => {
+                        setFiltroServico('TODOS');
+                        setFiltroOrigem('TODOS');
+                        setTermoBusca('');
+                      }}
+                      style={{ padding: 0 }}
+                    >
+                      Limpar Filtros
+                    </Button>
+                  )}
+                </Space>
+              </div>
+            )}
+          >
+            <Button 
+              type={filtroServico !== 'TODOS' || filtroOrigem !== 'TODOS' || termoBusca !== '' ? 'primary' : 'text'} 
+              icon={<FilterOutlined />} 
+            />
           </Popover>
           
           <Tooltip title={hideSidebar ? "Mostrar timeline" : "Ocultar timeline"}>
@@ -216,6 +385,7 @@ export default function TabNotasSessao({ idPaciente }) {
           <Tooltip title="Nova Anotação de Atendimento">
             <Button type="text" icon={<AimOutlined />} onClick={() => {
               setCurrentRelatorioId(null);
+              setCurrentAgendamentoId(null);
               form.resetFields();
               editor?.commands.setContent('<p></p>');
               setIsEditing(true);
@@ -230,30 +400,22 @@ export default function TabNotasSessao({ idPaciente }) {
             </Form.Item>
 
             <AnnotationCard>
-              {sessoes.length === 0 && !isEditing ? (
-                <Empty description="Nenhuma anotação de sessão cadastrada." style={{ padding: 40 }} />
+              {sessoesExibidas.length === 0 && !isEditing ? (
+                <Empty description="Nenhuma anotação localizada para os filtros selecionados." style={{ padding: 40 }} />
               ) : (
                 <Collapse activeKey={activeKey} onChange={setActiveKey} ghost expandIconPosition="start">
-                  {sessoes.map((item) => {
-                    // Menu de opções dos 3 pontinhos usando AntD Dropdown
+                  {sessoesExibidas.map((item) => {
                     const menuItems = [
-                      {
-                        key: 'edit',
-                        label: 'Editar',
-                        icon: <EditOutlined />,
-                        onClick: () => handleEditItem(item)
-                      },
-                      {
-                        type: 'divider',
-                      },
+                      { key: 'edit', label: 'Editar', icon: <EditOutlined />, onClick: () => handleEditItem(item) },
+                      { type: 'divider' },
                       {
                         key: 'delete',
                         label: (
                           <Popconfirm
                             title="Remover anotação?"
-                            description="Tem certeza que deseja excluir este registro do prontuário?"
+                            description="Tem certeza que deseja excluir esta evolução?"
                             onConfirm={() => handleDeleteItem(item.id_relatorio)}
-                            okText="Sim, excluir"
+                            okText="Excluir"
                             cancelText="Cancelar"
                             okButtonProps={{ danger: true }}
                           >
@@ -264,6 +426,8 @@ export default function TabNotasSessao({ idPaciente }) {
                       },
                     ];
 
+                    const nomeServico = item.agendamento?.servico?.nome || (item.id_agendamento ? "Sessão Agenda" : "Anotação Avulsa");
+
                     return (
                       <Panel 
                         header={
@@ -272,21 +436,18 @@ export default function TabNotasSessao({ idPaciente }) {
                               <Text strong style={{ textTransform: 'capitalize' }}>
                                 {formatarDataHeader(item)}
                               </Text>
-
                               <Tag color={item.id_agendamento ? "green" : "orange"}>
                                 {item.id_agendamento ? "Via Agenda" : "Avulso"}
                               </Tag>
                             </Space>
 
                             <Space onClick={e => e.stopPropagation()}>
-                              {/* TAG HUMANIZADA (SEM EXIBIR ID DE BANCO) */}
                               <Tag icon={<CalendarOutlined />} color="blue" style={{ borderRadius: '12px' }}>
-                                {item.agendamento ? "Sessão Presencial" : "Anotação"}
+                                {nomeServico}
                               </Tag>
 
                               <Button type="text" icon={<EditOutlined />} onClick={() => handleEditItem(item)} />
                               
-                              {/* MENU DOS 3 PONTINHOS */}
                               <Dropdown menu={{ items: menuItems }} trigger={['click']} placement="bottomRight">
                                 <Button type="text" icon={<MoreOutlined />} />
                               </Dropdown>
@@ -295,10 +456,9 @@ export default function TabNotasSessao({ idPaciente }) {
                         } 
                         key={String(item.id_relatorio)}
                       >
-                        <div key={isModalOpen ? 'off' : 'on'}>
+                        <div>
                           {isEditing && currentRelatorioId === item.id_relatorio ? (
                             <EditorWrapper>
-                              {/* VINCULAÇÃO DE CONSULTA INTEGRADA AO FORMULÁRIO DE EDIÇÃO */}
                               <div style={{ padding: '8px 12px', background: '#fafafa', borderBottom: '1px solid #f0f0f0', marginBottom: 12 }}>
                                 <Form.Item 
                                   name="id_agendamento" 
@@ -310,10 +470,13 @@ export default function TabNotasSessao({ idPaciente }) {
                                     placeholder="Selecione a consulta correspondente (opcional)..."
                                     allowClear
                                     style={{ width: '100%' }}
-                                    options={agendamentosPaciente.map(ag => ({
-                                      value: ag.id_agendamento,
-                                      label: `Consulta de ${new Date(ag.data_hora_inicio).toLocaleDateString('pt-BR')} às ${new Date(ag.data_hora_inicio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
-                                    }))}
+                                    options={agendamentosPaciente.map(ag => {
+                                      const labelServico = ag.servico?.nome ? ` - ${ag.servico.nome}` : '';
+                                      return {
+                                        value: ag.id_agendamento,
+                                        label: `Consulta de ${new Date(ag.data_hora_inicio).toLocaleDateString('pt-BR')} às ${new Date(ag.data_hora_inicio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}${labelServico}`
+                                      };
+                                    })}
                                   />
                                 </Form.Item>
                               </div>
@@ -340,7 +503,7 @@ export default function TabNotasSessao({ idPaciente }) {
                 </Collapse>
               )}
 
-              {/* FORMULÁRIO DE NOVA ANOTAÇÃO (QUANDO NÃO ESTÁ EDITANDO UM EXISTENTE) */}
+              {/* MODO ADICIONAR NOVA NOTA */}
               {isEditing && !currentRelatorioId && (
                 <div style={{ marginTop: 20, border: '1px solid #e8e8e8', borderRadius: 8, padding: 16, background: '#fff' }}>
                   <Title level={5} style={{ marginTop: 0 }}>Nova Evolução / Anotação de Atendimento</Title>
@@ -356,10 +519,13 @@ export default function TabNotasSessao({ idPaciente }) {
                         placeholder="Selecione a consulta correspondente (opcional)..."
                         allowClear
                         style={{ width: '100%' }}
-                        options={agendamentosPaciente.map(ag => ({
-                          value: ag.id_agendamento,
-                          label: `Consulta de ${new Date(ag.data_hora_inicio).toLocaleDateString('pt-BR')} às ${new Date(ag.data_hora_inicio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
-                        }))}
+                        options={agendamentosPaciente.map(ag => {
+                          const labelServico = ag.servico?.nome ? ` - ${ag.servico.nome}` : '';
+                          return {
+                            value: ag.id_agendamento,
+                            label: `Consulta de ${new Date(ag.data_hora_inicio).toLocaleDateString('pt-BR')} às ${new Date(ag.data_hora_inicio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}${labelServico}`
+                          };
+                        })}
                       />
                     </Form.Item>
                   </div>

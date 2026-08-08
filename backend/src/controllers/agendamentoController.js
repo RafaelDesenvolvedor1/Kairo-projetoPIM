@@ -1,13 +1,13 @@
 module.exports = (app) => {
     const { Op } = require('sequelize');
-    const Agendamentos = app.db.models.Agendamentos;
-    const Pacientes = app.db.models.Pacientes;
+    const Agendamentos = app.db?.models?.Agendamentos || app.models?.Agendamentos;
+    const Pacientes = app.db?.models?.Pacientes || app.models?.Pacientes;
     const googleCalendarService = require('../services/googleCalendarService')(app);
 
     return {
         create: async (req, res) => {
             try {
-                const { id_paciente, data_hora_inicio, data_hora_fim, status = 'agendado', observacoes } = req.body;
+                const { id_paciente, data_hora_inicio, data_hora_fim, status = 'agendado', observacoes, id_local, id_servico } = req.body;
                 const id_usuario = req.user.id_usuario;
 
                 if (!id_paciente || !data_hora_inicio || !data_hora_fim) {
@@ -45,6 +45,8 @@ module.exports = (app) => {
                 const agendamento = await Agendamentos.create({
                     id_paciente,
                     id_usuario,
+                    id_local: id_local || null,
+                    id_servico: id_servico || null,
                     data_hora_inicio,
                     data_hora_fim,
                     status,
@@ -58,13 +60,15 @@ module.exports = (app) => {
                     nomeDoPaciente
                 );
 
-                if (googleEvent && googleEvent.id) {
+                const sincronizado = !!(googleEvent && googleEvent.id);
+                if (sincronizado) {
                     await agendamento.update({ google_event_id: googleEvent.id });
                 }
 
                 return res.json({
                     message: 'Agendamento criado com sucesso',
-                    agendamento
+                    agendamento,
+                    sincronizadoGoogle: sincronizado
                 });
             } catch (error) {
                 console.error('Erro ao criar agendamento:', error);
@@ -78,7 +82,11 @@ module.exports = (app) => {
 
                 const agendamentos = await Agendamentos.findAll({
                     where: { id_usuario },
-                    include: [{ association: 'paciente', attributes: ['id', 'nomePaciente', 'email', 'telefone'] }],
+                    include: [
+                        { association: 'paciente', attributes: ['id', 'nomePaciente', 'email', 'telefone'] },
+                        { association: 'local', required: false },
+                        { association: 'servico', required: false }
+                    ],
                     order: [['data_hora_inicio', 'DESC']]
                 });
 
@@ -109,7 +117,11 @@ module.exports = (app) => {
                             [Op.between]: [startOfDay, endOfDay]
                         }
                     },
-                    include: [{ association: 'paciente', attributes: ['id', 'nomePaciente', 'email', 'telefone'] }],
+                    include: [
+                        { association: 'paciente', attributes: ['id', 'nomePaciente', 'email', 'telefone'] },
+                        { association: 'local', required: false },
+                        { association: 'servico', required: false }
+                    ],
                     order: [['data_hora_inicio', 'ASC']] 
                 });
 
@@ -177,14 +189,16 @@ module.exports = (app) => {
                 const { id_paciente } = req.params;
                 const id_usuario = req.user.id_usuario;
 
-                console.log(`[Kairo API] Buscando agendamentos do paciente ID: ${id_paciente} para o usuário: ${id_usuario}`);
-
                 const agendamentos = await Agendamentos.findAll({
                     where: { 
                         id_paciente: id_paciente,
                         id_usuario: id_usuario 
                     },
-                    include: [{ association: 'paciente', attributes: ['id', 'nomePaciente', 'email', 'telefone'] }],
+                    include: [
+                        { association: 'paciente', attributes: ['id', 'nomePaciente', 'email', 'telefone'] },
+                        { association: 'local', required: false },
+                        { association: 'servico', required: false }
+                    ],
                     order: [['data_hora_inicio', 'ASC']]
                 });
 
@@ -202,7 +216,11 @@ module.exports = (app) => {
 
                 const agendamento = await Agendamentos.findOne({
                     where: { id_agendamento: id, id_usuario },
-                    include: [{ association: 'paciente' }]
+                    include: [
+                        { association: 'paciente' },
+                        { association: 'local' },
+                        { association: 'servico' }
+                    ]
                 });
 
                 if (!agendamento) {
@@ -219,7 +237,7 @@ module.exports = (app) => {
         update: async (req, res) => {
             try {
                 const { id } = req.params;
-                const { data_hora_inicio, data_hora_fim, status, observacoes } = req.body;
+                const { data_hora_inicio, data_hora_fim, status, observacoes, id_local, id_servico } = req.body;
                 const id_usuario = req.user.id_usuario;
 
                 const agendamento = await Agendamentos.findOne({
@@ -257,9 +275,12 @@ module.exports = (app) => {
                 if (data_hora_fim) updateData.data_hora_fim = data_hora_fim;
                 if (status) updateData.status = status;
                 if (observacoes !== undefined) updateData.observacoes = observacoes;
+                if (id_local !== undefined) updateData.id_local = id_local ? parseInt(id_local) : null;
+                if (id_servico !== undefined) updateData.id_servico = id_servico ? parseInt(id_servico) : null;
 
                 await agendamento.update(updateData);
 
+                let sincronizadoGoogle = false;
                 if (agendamento.google_event_id) {
                     const nomeDoPaciente = agendamento.paciente ? (agendamento.paciente.nomePaciente || agendamento.paciente.nome) : 'Paciente';
                     const eventData = {
@@ -276,16 +297,22 @@ module.exports = (app) => {
                     };
 
                     await googleCalendarService.updateCalendarEvent(id_usuario, agendamento.google_event_id, eventData);
+                    sincronizadoGoogle = true;
                 }
 
                 const updated = await Agendamentos.findOne({
                     where: { id_agendamento: id, id_usuario },
-                    include: [{ association: 'paciente' }]
+                    include: [
+                        { association: 'paciente' },
+                        { association: 'local' },
+                        { association: 'servico' }
+                    ]
                 });
 
                 return res.json({
-                    message: 'Agendamento updated com sucesso',
-                    agendamento: updated
+                    message: 'Agendamento atualizado com sucesso',
+                    agendamento: updated,
+                    sincronizadoGoogle
                 });
             } catch (error) {
                 console.error('Erro ao atualizar agendamento:', error);

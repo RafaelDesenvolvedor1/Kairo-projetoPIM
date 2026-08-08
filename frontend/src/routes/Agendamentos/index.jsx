@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Calendar, Drawer, Form, Input, TimePicker, Select, Spin, notification } from "antd";
 import dayjs from "dayjs";
+
 import ButtonSubmit from '../../components/ButtonSubmit';
 import agendamentosService from '../../services/agendamentosService'; 
 import pacientesService from '../../services/pacientesService';
@@ -27,7 +28,6 @@ export default function Agendamentos() {
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState(null);
 
-  // Buscar dados ao carregar
   useEffect(() => {
     carregarDados();
   }, []);
@@ -62,7 +62,6 @@ export default function Agendamentos() {
     }
   };
 
-  // Clique em um dia do calendário
   const onSelect = (date) => {
     setSelectedDate(date);
     setIsEditing(false);
@@ -71,7 +70,6 @@ export default function Agendamentos() {
     setDrawerOpen(true);
   };
 
-  // Editar agendamento
   const handleEdit = (record) => {
     setIsEditing(true);
     setEditingId(record.id_agendamento);
@@ -87,7 +85,6 @@ export default function Agendamentos() {
     setDrawerOpen(true);
   };
 
-  // Fechar drawer
   const onClose = () => {
     setDrawerOpen(false);
     form.resetFields();
@@ -95,27 +92,25 @@ export default function Agendamentos() {
     setEditingId(null);
   };
 
-  // Salvar agendamento (criar ou editar)
   const handleSubmit = async (values) => {
     try {
       setLoading(true);
 
-      // Construir a data e hora completas
       const dataHoraInicio = selectedDate
         .set('hour', values.hora.hour())
         .set('minute', values.hora.minute())
         .set('second', 0);
 
-      // Definir a hora fim (30 minutos depois)
       const dataHoraFim = dataHoraInicio.clone().add(30, 'minutes');
 
-      // Preparar payload
       const payload = {
         id_paciente: parseInt(values.id_paciente),
         data_hora_inicio: dataHoraInicio.toISOString(),
         data_hora_fim: dataHoraFim.toISOString(),
         status: values.status || 'agendado',
         observacoes: values.observacoes || '',
+        id_local: values.local ? parseInt(values.local) : null,
+        id_servico: values.servico ? parseInt(values.servico) : null,
       };
 
       let result;
@@ -144,10 +139,7 @@ export default function Agendamentos() {
                 }
               : a
           ));
-          setDrawerOpen(false);
-          form.resetFields();
-          setIsEditing(false);
-          setEditingId(null);
+          onClose();
         } else {
           const errorMessage = result.message || 'Erro ao atualizar agendamento';
           if (errorMessage.toLowerCase().includes('já existe') || errorMessage.toLowerCase().includes('horário')) {
@@ -176,8 +168,7 @@ export default function Agendamentos() {
             ...result.data.agendamento,
             paciente: pacienteSelecionado
           }]);
-          setDrawerOpen(false);
-          form.resetFields();
+          onClose();
         } else {
           const errorMessage = result.message || 'Erro ao criar agendamento';
           if (errorMessage.toLowerCase().includes('já existe') || errorMessage.toLowerCase().includes('horário')) {
@@ -195,22 +186,20 @@ export default function Agendamentos() {
     }
   };
 
-  // Retorna o sufixo CSS correto de acordo com o status vindo do ENUM do Banco
   const getDotClassByStatus = (status) => {
     const statusFormatado = status ? status.toLowerCase() : 'agendado';
     switch (statusFormatado) {
       case 'concluido':
       case 'atendido':
-        return 'dot-concluido'; // Verde
+        return 'dot-concluido';
       case 'cancelado':
-        return 'dot-cancelado'; // Vermelho
+        return 'dot-cancelado';
       case 'agendado':
       default:
-        return 'dot-agendado'; // Azul
+        return 'dot-agendado';
     }
   };
 
-  // Renderizar eventos no calendário
   const dateCellRender = (date) => {
     const eventosDoDia = agendamentos.filter((e) =>
       dayjs(e.data_hora_inicio).isSame(date, "day")
@@ -219,13 +208,13 @@ export default function Agendamentos() {
     if (eventosDoDia.length === 0) return null;
 
     return (
+
       <div className="event-cell">
         {eventosDoDia.map((evento, index) => {
           const horaFormatada = dayjs(evento.data_hora_inicio).format("HH:mm");
           
           return (
             <div key={index} className="event-item" onClick={() => handleEdit(evento)}>
-              {/* Adicionada a classe dinâmica de cor aqui */}
               <span className={`dot ${getDotClassByStatus(evento.status)}`} />
               <span className="event-name">
                 <strong>{horaFormatada}</strong> - {evento.paciente?.nomePaciente || 'Sem paciente'}
@@ -294,6 +283,7 @@ export default function Agendamentos() {
             >
               <Select
                 placeholder="Selecione um local (opcional)"
+                allowClear
                 options={locais.map(l => ({ label: l.nome, value: l.id_local }))}
               />
             </Form.Item>
@@ -304,6 +294,7 @@ export default function Agendamentos() {
             >
               <Select
                 placeholder="Selecione um serviço (opcional)"
+                allowClear
                 options={servicos.map(s => ({ label: s.nome, value: s.id_servico }))}
               />
             </Form.Item>
