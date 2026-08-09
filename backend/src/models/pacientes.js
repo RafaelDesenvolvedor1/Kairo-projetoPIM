@@ -11,7 +11,7 @@ module.exports = (app) => {
         allowNull: false,
       },
       nomePaciente: {
-        type: DataTypes.STRING(50),
+        type: DataTypes.STRING(100),
         allowNull: false,
         validate: {
           notEmpty: true,
@@ -22,11 +22,78 @@ module.exports = (app) => {
         allowNull: true,
       },
       email: {
-        type: DataTypes.STRING(50),
+        type: DataTypes.STRING(100),
         allowNull: false,
         validate: {
           notEmpty: true,
         },
+      },
+      // Novos campos cadastrais (Dados Pessoais)
+      cpf: {
+        type: DataTypes.STRING(20),
+        allowNull: true,
+      },
+      rg: {
+        type: DataTypes.STRING(20),
+        allowNull: true,
+      },
+      dataNascimento: {
+        type: DataTypes.DATEONLY,
+        allowNull: true,
+      },
+      genero: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+      },
+      profissao: {
+        type: DataTypes.STRING(100),
+        allowNull: true,
+      },
+      estadoCivil: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+      },
+      // Endereço
+      cep: {
+        type: DataTypes.STRING(10),
+        allowNull: true,
+      },
+      endereco: {
+        type: DataTypes.STRING(255),
+        allowNull: true,
+      },
+      numero: {
+        type: DataTypes.STRING(20),
+        allowNull: true,
+      },
+      complemento: {
+        type: DataTypes.STRING(100),
+        allowNull: true,
+      },
+      bairro: {
+        type: DataTypes.STRING(100),
+        allowNull: true,
+      },
+      cidade: {
+        type: DataTypes.STRING(100),
+        allowNull: true,
+      },
+      estado: {
+        type: DataTypes.STRING(2),
+        allowNull: true,
+      },
+      // Contato de Emergência
+      contatoEmergenciaNome: {
+        type: DataTypes.STRING(100),
+        allowNull: true,
+      },
+      contatoEmergenciaTelefone: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+      },
+      observacoes: {
+        type: DataTypes.TEXT,
+        allowNull: true,
       },
       id_usuario: {
         type: DataTypes.INTEGER,
@@ -35,7 +102,7 @@ module.exports = (app) => {
     },
     {
       tableName: "pacientes",
-      timestamps: false, // Mantendo o padrão das outras sem timestamps automáticos do Sequelize
+      timestamps: false,
     }
   );
 

@@ -5,9 +5,8 @@ module.exports = (app) => {
 
   app
     .route("/pacientes")
-    .all(app.auth.authenticate()) // Autenticação obrigatória para este grupo de rotas
+    .all(app.auth.authenticate())
     .get(async (req, res) => {
-      // Listar apenas os pacientes do usuário autenticado
       try {
         const where = { id_usuario: req.user.id_usuario };
         const result = await Pacientes.findAll({ where });
@@ -17,7 +16,6 @@ module.exports = (app) => {
       }
     })
     .post(async (req, res) => {
-      // Cadastra um paciente associado ao usuário autenticado
       try {
         req.body.id_usuario = req.user.id_usuario;
         const result = await Pacientes.create(req.body);
@@ -27,13 +25,11 @@ module.exports = (app) => {
       }
     });
 
-  // Quantidade de pacientes do usuário logado
   app
     .route("/pacientes/count")
     .all(app.auth.authenticate())
     .get(async (req, res) => {
       try {
-        // Filtra para contar apenas os pacientes do próprio usuário
         const where = { id_usuario: req.user.id_usuario };
         const count = await Pacientes.count({ where });
         res.json({ count });
@@ -42,16 +38,15 @@ module.exports = (app) => {
       }
     });
 
-  // Buscar paciente específico do usuário pelo nome exato
   app
     .route("/pacientes/nome/:nome")
     .all(app.auth.authenticate())
     .get(async (req, res) => {
       try {
-        const { nome } = req.params; // Corrigido de nomePacientes para nome
+        const { nome } = req.params;
         const where = { 
           nomePaciente: nome,
-          id_usuario: req.user.id_usuario // Garante que pertence ao usuário logado
+          id_usuario: req.user.id_usuario 
         };
         const result = await Pacientes.findOne({ where });
         if (result) {
@@ -60,11 +55,10 @@ module.exports = (app) => {
           res.sendStatus(404);
         }
       } catch (err) {
-        res.status(412).json({ msg: err.message }); // Corrigido de sendStatus para status
+        res.status(412).json({ msg: err.message });
       }
     });
 
-  // Busca parcial por nome (Like) protegida por usuário
   app
     .route("/pacientes/search")
     .all(app.auth.authenticate())
@@ -77,7 +71,7 @@ module.exports = (app) => {
         
         const result = await Pacientes.findAll({
           where: {
-            id_usuario: req.user.id_usuario, // Garante que a busca só traga registros do usuário
+            id_usuario: req.user.id_usuario,
             nomePaciente: {
               [Op.like]: `%${searchNome}%`,
             },
@@ -85,7 +79,7 @@ module.exports = (app) => {
         });
         res.json(result);
       } catch (err) {
-        res.status(412).json({ msg: err.message }); // Corrigido de sendStatus para status
+        res.status(412).json({ msg: err.message });
       }
     });
 
@@ -93,7 +87,6 @@ module.exports = (app) => {
     .route("/pacientes/:id")
     .all(app.auth.authenticate())
     .get(async (req, res) => {
-      // Retorna um paciente específico se pertencer ao usuário
       try {
         const { id } = req.params;
         const where = { 
@@ -111,7 +104,6 @@ module.exports = (app) => {
       }
     })
     .put(async (req, res) => {
-      // Edita um paciente apenas se pertencer ao usuário logado
       try {
         const { id } = req.params;
         const where = { 
@@ -119,22 +111,21 @@ module.exports = (app) => {
           id_usuario: req.user.id_usuario 
         };
         
-        // Impede que o usuário tente alterar o dono do paciente no corpo da requisição
-        delete req.body.id_usuario; 
+        delete req.body.id_usuario;
 
         const [updatedRows] = await Pacientes.update(req.body, { where });
         
         if (updatedRows > 0) {
-          res.sendStatus(204);
+          const pacienteAtualizado = await Pacientes.findOne({ where });
+          res.json(pacienteAtualizado);
         } else {
-          res.sendStatus(404); // Se tentar editar um id que não é dele ou não existe
+          res.sendStatus(404);
         }
       } catch (err) {
         res.status(412).json({ msg: err.message });
       }
     })
     .delete(async (req, res) => {
-      // Deleta um paciente apenas se pertencer ao usuário logado
       try {
         const { id } = req.params;
         const where = { 
@@ -146,7 +137,7 @@ module.exports = (app) => {
         if (deletedRows > 0) {
           res.sendStatus(204);
         } else {
-          res.sendStatus(404); // Se tentar deletar um id que não é dele ou não existe
+          res.sendStatus(404);
         }
       } catch (err) {
         res.status(412).json({ msg: err.message });

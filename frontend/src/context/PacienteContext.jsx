@@ -47,22 +47,28 @@ export const PacienteProvider = ({ children }) => {
   }
 
   async function updatePaciente(updatedPaciente) {
-    try {
-      const pacienteRetornado = await putPaciente(
-        updatePaciente.id,
-        updatePaciente
-      );
-      setPacientesList((prevList) =>
-        prevList.map((paciente) =>
-          paciente.id === updatedPaciente.id ? updatedPaciente : paciente
-        )
-      );
-      return pacienteRetornado;
-    } catch (err) {
-      console.error("Falha o atualizar paciente:", err);
-      throw err;
-    }
+  try {
+    // 1. Envia a alteração para o backend e captura o objeto completo retornado
+    const pacienteRetornado = await putPaciente(
+      updatedPaciente.id,
+      updatedPaciente
+    );
+
+    // 2. Atualiza a lista global fundindo os dados novos e mantendo o camelCase
+    setPacientesList((prevList) =>
+      prevList.map((paciente) =>
+        paciente.id === updatedPaciente.id 
+          ? { ...paciente, ...updatedPaciente, ...pacienteRetornado } 
+          : paciente
+      )
+    );
+    
+    return pacienteRetornado;
+  } catch (err) {
+    console.error("Falha ao atualizar paciente:", err);
+    throw err;
   }
+}
 
   return (
     <PacienteContext.Provider
