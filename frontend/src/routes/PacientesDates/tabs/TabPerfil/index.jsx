@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useContext } from 'react';
 import { 
-  Row, Col, Typography, Card, Space, Spin, Alert, Button, Modal, Form, Input, DatePicker, Select, message, Divider 
+  Row, Col, Typography, Card, Space, Spin, Alert, Button, Modal, Form, Input, DatePicker, Select, Divider 
 } from 'antd';
 import { 
   UserOutlined, EditOutlined, HomeOutlined, ContactsOutlined, SaveOutlined 
@@ -8,6 +8,8 @@ import {
 import dayjs from 'dayjs';
 
 import { PacienteContext } from '../../../../context/PacienteContext';
+import { useMessage } from '../../../../context/MessageProvider'; // Hook do seu MessageProvider
+import cepService from '../../../../services/cepService';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -39,6 +41,8 @@ const validarCPFVisual = (_, value) => {
 
 export default function TabPerfil({ idPaciente }) {
   const { pacientesList, updatePaciente } = useContext(PacienteContext);
+  const messageApi = useMessage(); // Instância do seu MessageContext
+  const messageKey = 'cepNotificationKey';
 
   const [dados, setDados] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -71,6 +75,48 @@ export default function TabPerfil({ idPaciente }) {
 
     setLoading(false);
   }, [idPaciente, pacientesList]);
+
+  // Função para consultar CEP e exibir mensagens via useMessage()
+  const handleBuscaCep = async (e) => {
+    const cepDigitado = e.target.value;
+    const cepLimpo = cepDigitado.replace(/\D/g, '');
+
+    // Dispara a busca quando atingir 8 dígitos numéricos
+    if (cepLimpo.length === 8) {
+      messageApi.open({
+        key: messageKey,
+        type: 'loading',
+        content: 'Buscando CEP...',
+      });
+
+      const resultado = await cepService.buscarEnderecoPorCep(cepLimpo);
+
+      if (resultado.sucesso) {
+        messageApi.open({
+          key: messageKey,
+          type: 'success',
+          content: 'Endereço localizado!',
+          duration: 2,
+        });
+
+        // Preenche os campos automaticamente
+        form.setFieldsValue({
+          endereco: resultado.dados.endereco,
+          bairro: resultado.dados.bairro,
+          cidade: resultado.dados.cidade,
+          estado: resultado.dados.estado,
+        });
+      } else {
+        // Exibe a mensagem de CEP não encontrado ou erro do cepService
+        messageApi.open({
+          key: messageKey,
+          type: 'error',
+          content: resultado.mensagem || 'CEP não encontrado.',
+          duration: 3,
+        });
+      }
+    }
+  };
 
   // Preenche o formulário para edição
   const handleOpenEditModal = () => {
@@ -113,18 +159,30 @@ export default function TabPerfil({ idPaciente }) {
 
       await updatePaciente(payload);
 
-      message.success('Perfil atualizado com sucesso!');
+      messageApi.open({
+        type: 'success',
+        content: 'Perfil atualizado com sucesso!',
+        duration: 2,
+      });
+
       setIsModalOpen(false);
     } catch (err) {
       console.error("Erro ao salvar alterações no Perfil:", err);
 
-      // Exibe os erros retornados pelo Zod no backend
       if (err.response && err.response.data && err.response.data.erros) {
         err.response.data.erros.forEach(e => {
-          message.error(`${e.campo ? e.campo + ': ' : ''}${e.mensagem}`);
+          messageApi.open({
+            type: 'error',
+            content: `${e.campo ? e.campo + ': ' : ''}${e.mensagem}`,
+            duration: 3,
+          });
         });
       } else {
-        message.error('Erro ao atualizar dados do paciente.');
+        messageApi.open({
+          type: 'error',
+          content: 'Erro ao atualizar dados do paciente.',
+          duration: 3,
+        });
       }
     } finally {
       setSaving(false);
@@ -275,7 +333,7 @@ export default function TabPerfil({ idPaciente }) {
         </Row>
       </Card>
 
-      {/* MODAL DE EDIÇÃO DO PERFIL COM ANTD RULES ROBUSTAS */}
+      {/* MODAL DE EDIÇÃO DO PERFIL */}
       <Modal
         title="Editar Dados do Paciente"
         open={isModalOpen}
@@ -389,7 +447,11 @@ export default function TabPerfil({ idPaciente }) {
                   { pattern: /^\d{5}-?\d{3}$/, message: 'CEP deve conter 8 dígitos (ex: 00000000 ou 00000-000)' }
                 ]}
               >
-                <Input placeholder="00000000" maxLength={9} />
+                <Input 
+                  placeholder="00000000" 
+                  maxLength={9} 
+                  onChange={handleBuscaCep} 
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
