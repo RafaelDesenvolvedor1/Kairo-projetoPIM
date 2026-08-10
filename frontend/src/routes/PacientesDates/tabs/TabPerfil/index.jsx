@@ -3,8 +3,7 @@ import {
   Row, Col, Typography, Card, Space, Spin, Alert, Button, Modal, Form, Input, DatePicker, Select, message, Divider 
 } from 'antd';
 import { 
-  UserOutlined, PhoneOutlined, MailOutlined, EditOutlined, 
-  HomeOutlined, IdcardOutlined, ContactsOutlined, SaveOutlined 
+  UserOutlined, EditOutlined, HomeOutlined, ContactsOutlined, SaveOutlined 
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 
@@ -13,6 +12,30 @@ import { PacienteContext } from '../../../../context/PacienteContext';
 const { Title, Text } = Typography;
 const { Option } = Select;
 const { TextArea } = Input;
+
+// Helper para validação visual de CPF matemática no AntD
+const validarCPFVisual = (_, value) => {
+  if (!value) return Promise.resolve();
+  
+  const cpfLimp = value.replace(/\D/g, '');
+  if (cpfLimp.length !== 11 || /^(\d)\1{10}$/.test(cpfLimp)) {
+    return Promise.reject(new Error('CPF inválido!'));
+  }
+
+  let soma = 0, resto;
+  for (let i = 1; i <= 9; i++) soma += parseInt(cpfLimp.substring(i - 1, i)) * (11 - i);
+  resto = (soma * 10) % 11;
+  if (resto === 10 || resto === 11) resto = 0;
+  if (resto !== parseInt(cpfLimp.substring(9, 10))) return Promise.reject(new Error('CPF inválido!'));
+
+  soma = 0;
+  for (let i = 1; i <= 10; i++) soma += parseInt(cpfLimp.substring(i - 1, i)) * (12 - i);
+  resto = (soma * 10) % 11;
+  if (resto === 10 || resto === 11) resto = 0;
+  if (resto !== parseInt(cpfLimp.substring(10, 11))) return Promise.reject(new Error('CPF inválido!'));
+
+  return Promise.resolve();
+};
 
 export default function TabPerfil({ idPaciente }) {
   const { pacientesList, updatePaciente } = useContext(PacienteContext);
@@ -49,7 +72,7 @@ export default function TabPerfil({ idPaciente }) {
     setLoading(false);
   }, [idPaciente, pacientesList]);
 
-  // Preenche o formulário com as informações do estado centralizado
+  // Preenche o formulário para edição
   const handleOpenEditModal = () => {
     if (!dados) return;
 
@@ -88,14 +111,21 @@ export default function TabPerfil({ idPaciente }) {
         dataNascimento: values.dataNascimento ? values.dataNascimento.format('YYYY-MM-DD') : null
       };
 
-      // Dispara a atualização através do Contexto
       await updatePaciente(payload);
 
       message.success('Perfil atualizado com sucesso!');
       setIsModalOpen(false);
     } catch (err) {
       console.error("Erro ao salvar alterações no Perfil:", err);
-      message.error('Erro ao atualizar dados do paciente.');
+
+      // Exibe os erros retornados pelo Zod no backend
+      if (err.response && err.response.data && err.response.data.erros) {
+        err.response.data.erros.forEach(e => {
+          message.error(`${e.campo ? e.campo + ': ' : ''}${e.mensagem}`);
+        });
+      } else {
+        message.error('Erro ao atualizar dados do paciente.');
+      }
     } finally {
       setSaving(false);
     }
@@ -122,7 +152,7 @@ export default function TabPerfil({ idPaciente }) {
     return dayjs(dataStr).format('DD/MM/YYYY');
   };
 
-  // Fallback para mapeamento de chaves
+  // Fallbacks para exibição
   const nomeExibicao = dados?.nomePaciente || dados?.nome_paciente || 'Não informado';
   const dataNascExibicao = dados?.dataNascimento || dados?.data_nascimento;
   const estadoCivilExibicao = dados?.estadoCivil || dados?.estado_civil || 'Não informado';
@@ -131,7 +161,7 @@ export default function TabPerfil({ idPaciente }) {
 
   return (
     <div style={{ padding: '20px 0' }}>
-      {/* CABEÇALHO DO PERFIL COM BOTÃO DE EDIÇÃO */}
+      {/* CABEÇALHO DO PERFIL */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <div>
           <Title level={4} style={{ margin: 0 }}>{nomeExibicao}</Title>
@@ -245,7 +275,7 @@ export default function TabPerfil({ idPaciente }) {
         </Row>
       </Card>
 
-      {/* MODAL DE EDIÇÃO DO PERFIL */}
+      {/* MODAL DE EDIÇÃO DO PERFIL COM ANTD RULES ROBUSTAS */}
       <Modal
         title="Editar Dados do Paciente"
         open={isModalOpen}
@@ -258,18 +288,38 @@ export default function TabPerfil({ idPaciente }) {
           <Divider orientation="left" style={{ fontSize: 13, color: '#8c8c8c' }}>Dados Pessoais</Divider>
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="nomePaciente" label="Nome Completo" rules={[{ required: true, message: 'Informe o nome' }]}>
+              <Form.Item 
+                name="nomePaciente" 
+                label="Nome Completo" 
+                rules={[
+                  { required: true, message: 'O nome do paciente é obrigatório!' },
+                  { min: 3, message: 'O nome deve ter pelo menos 3 caracteres!' },
+                  { max: 50, message: 'O nome deve ter no máximo 50 caracteres!' }
+                ]}
+              >
                 <Input placeholder="Ex: Cleiton Santos" />
               </Form.Item>
             </Col>
             <Col span={6}>
-              <Form.Item name="cpf" label="CPF">
-                <Input placeholder="000.000.000-00" />
+              <Form.Item 
+                name="cpf" 
+                label="CPF"
+                rules={[
+                  { validator: validarCPFVisual }
+                ]}
+              >
+                <Input placeholder="000.000.000-00" maxLength={14} />
               </Form.Item>
             </Col>
             <Col span={6}>
-              <Form.Item name="rg" label="RG">
-                <Input placeholder="00.000.000-0" />
+              <Form.Item 
+                name="rg" 
+                label="RG"
+                rules={[
+                  { pattern: /^[a-zA-Z0-9.\-\s]{5,20}$/, message: 'RG deve conter entre 5 e 20 caracteres' }
+                ]}
+              >
+                <Input placeholder="00.000.000-0" maxLength={20} />
               </Form.Item>
             </Col>
             <Col span={8}>
@@ -308,18 +358,38 @@ export default function TabPerfil({ idPaciente }) {
           <Divider orientation="left" style={{ fontSize: 13, color: '#8c8c8c' }}>Contato e Endereço</Divider>
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="telefone" label="Telefone / WhatsApp">
-                <Input placeholder="11999999999" />
+              <Form.Item 
+                name="telefone" 
+                label="Telefone / WhatsApp"
+                rules={[
+                  { pattern: /^\d{10,11}$/, message: 'Insira um telefone válido com DDD (apenas números)' }
+                ]}
+              >
+                <Input placeholder="11999999999" maxLength={11} />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="email" label="E-mail" rules={[{ required: true, message: 'Informe o e-mail' }]}>
+              <Form.Item 
+                name="email" 
+                label="E-mail" 
+                rules={[
+                  { required: true, message: 'O e-mail é obrigatório!' },
+                  { type: 'email', message: 'Por favor, insira um e-mail válido!' },
+                  { max: 50, message: 'E-mail pode ter no máximo 50 caracteres!' }
+                ]}
+              >
                 <Input placeholder="exemplo@email.com" />
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item name="cep" label="CEP">
-                <Input placeholder="00000-000" />
+              <Form.Item 
+                name="cep" 
+                label="CEP"
+                rules={[
+                  { pattern: /^\d{5}-?\d{3}$/, message: 'CEP deve conter 8 dígitos (ex: 00000000 ou 00000-000)' }
+                ]}
+              >
+                <Input placeholder="00000000" maxLength={9} />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -348,8 +418,14 @@ export default function TabPerfil({ idPaciente }) {
               </Form.Item>
             </Col>
             <Col span={3}>
-              <Form.Item name="estado" label="UF">
-                <Input placeholder="SP" maxLength={2} />
+              <Form.Item 
+                name="estado" 
+                label="UF"
+                rules={[
+                  { max: 2, message: 'UF deve ter 2 letras' }
+                ]}
+              >
+                <Input placeholder="SP" maxLength={2} style={{ textTransform: 'uppercase' }} />
               </Form.Item>
             </Col>
           </Row>
@@ -362,8 +438,14 @@ export default function TabPerfil({ idPaciente }) {
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="contatoEmergenciaTelefone" label="Telefone de Emergência">
-                <Input placeholder="11999999999" />
+              <Form.Item 
+                name="contatoEmergenciaTelefone" 
+                label="Telefone de Emergência"
+                rules={[
+                  { pattern: /^\d{10,11}$/, message: 'Insira um telefone válido com DDD (apenas números)' }
+                ]}
+              >
+                <Input placeholder="11999999999" maxLength={11} />
               </Form.Item>
             </Col>
             <Col span={24}>

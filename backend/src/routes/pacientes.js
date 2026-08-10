@@ -1,12 +1,15 @@
 const { Op } = require("sequelize");
+// Corrigido para subir 1 nível até a raiz do backend onde a pasta 'validate' reside
+const { validarPaciente } = require("../validate/pacienteValidate");
 
 module.exports = (app) => {
   const Pacientes = app.models.pacientes;
 
   app
     .route("/pacientes")
-    .all(app.auth.authenticate())
+    .all(app.auth.authenticate()) // Autenticação obrigatória para este grupo de rotas
     .get(async (req, res) => {
+      // Listar apenas os pacientes do usuário autenticado
       try {
         const where = { id_usuario: req.user.id_usuario };
         const result = await Pacientes.findAll({ where });
@@ -15,7 +18,9 @@ module.exports = (app) => {
         res.status(412).json({ msg: err.message });
       }
     })
-    .post(async (req, res) => {
+    // Injetado middleware de validação Zod antes do cadastro
+    .post(validarPaciente, async (req, res) => {
+      // Cadastra um paciente associado ao usuário autenticado
       try {
         req.body.id_usuario = req.user.id_usuario;
         const result = await Pacientes.create(req.body);
@@ -25,6 +30,7 @@ module.exports = (app) => {
       }
     });
 
+  // Quantidade de pacientes do usuário logado
   app
     .route("/pacientes/count")
     .all(app.auth.authenticate())
@@ -38,6 +44,7 @@ module.exports = (app) => {
       }
     });
 
+  // Buscar paciente específico do usuário pelo nome exato
   app
     .route("/pacientes/nome/:nome")
     .all(app.auth.authenticate())
@@ -59,6 +66,7 @@ module.exports = (app) => {
       }
     });
 
+  // Busca parcial por nome (Like) protegida por usuário
   app
     .route("/pacientes/search")
     .all(app.auth.authenticate())
@@ -103,7 +111,8 @@ module.exports = (app) => {
         res.status(412).json({ msg: err.message });
       }
     })
-    .put(async (req, res) => {
+    // Injetado middleware de validação Zod antes da edição (PUT)
+    .put(validarPaciente, async (req, res) => {
       try {
         const { id } = req.params;
         const where = { 
@@ -111,13 +120,12 @@ module.exports = (app) => {
           id_usuario: req.user.id_usuario 
         };
         
-        delete req.body.id_usuario;
+        delete req.body.id_usuario; 
 
         const [updatedRows] = await Pacientes.update(req.body, { where });
         
         if (updatedRows > 0) {
-          const pacienteAtualizado = await Pacientes.findOne({ where });
-          res.json(pacienteAtualizado);
+          res.sendStatus(204);
         } else {
           res.sendStatus(404);
         }

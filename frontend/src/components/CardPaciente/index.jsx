@@ -2,7 +2,7 @@ import { Card, Flex, Avatar, Descriptions, Form, Input, Row, Col } from "antd";
 import { CardStyle } from "./styles";
 import { UserOutlined } from "@ant-design/icons";
 import MyDrawer from "../MyDrawer";
-import { useState, useContext } from "react";
+import { useState, useContext, useEffect } from "react";
 import ButtonSubmit from "../ButtonSubmit";
 import ButtonDelete from "../ButtonDelete";
 
@@ -29,6 +29,16 @@ export default function CardPaciente({
     telefone: pacientePhone,
     email: pacienteEmail,
   });
+
+  // Garante que o estado local do Card reflita mudanças globais vindas do Contexto
+  useEffect(() => {
+    setPaciente({
+      id: pacienteId,
+      nomePaciente: pacienteName,
+      telefone: pacientePhone,
+      email: pacienteEmail,
+    });
+  }, [pacienteId, pacienteName, pacientePhone, pacienteEmail]);
 
   const onClose = () => {
     setDrawerOpen(false);
@@ -57,26 +67,39 @@ export default function CardPaciente({
 
   const { updatePaciente, removePaciente } = useContext(PacienteContext);
 
-  const updatePacienteHandler = (values) => {
+  // Refatorado para async/await para travar o estado caso a API retorne erro
+  const updatePacienteHandler = async (values) => {
     const updatedPaciente = {
       id: paciente.id,
       nomePaciente: values.nomePaciente,
-      telefone: values.telefone,
+      telefone: values.telefone || null,
       email: values.email,
     };
+    
     try {
-      updatePaciente(updatedPaciente);
+      // Aguarda a resposta positiva da API e do Contexto
+      await updatePaciente(updatedPaciente);
+      
+      // Só altera o estado local e fecha o Drawer se a linha acima funcionar
       setPaciente(updatedPaciente);
       onClose();
       showMessage("success", "Paciente atualizado com sucesso!");
     } catch (error) {
-      showMessage("error", "Erro ao atualizar paciente.");
+      console.error("Erro na atualização rápida do paciente:", error);
+      
+      if (error.response && error.response.data && error.response.data.erros) {
+        error.response.data.erros.forEach((e) => {
+          showMessage("error", `${e.campo ? e.campo + ': ' : ''}${e.mensagem}`);
+        });
+      } else {
+        showMessage("error", "Erro ao atualizar paciente.");
+      }
     }
   };
 
-  const deletePacienteHandler = () => {
+  const deletePacienteHandler = async () => {
     try {
-      removePaciente(paciente.id);
+      await removePaciente(paciente.id);
       onClose();
       showMessage("success", "Paciente excluído com sucesso!");
     } catch (error) {
@@ -94,7 +117,7 @@ export default function CardPaciente({
 
           <Descriptions column={1} style={{ marginLeft: 20 }}>
             <Descriptions.Item label="Telefone">
-              {paciente.telefone}
+              {paciente.telefone || "Não informado"}
             </Descriptions.Item>
             <Descriptions.Item label="E-mail">
               {paciente.email}
@@ -103,7 +126,7 @@ export default function CardPaciente({
         </Flex>
       </CardStyle>
 
-      <MyDrawer open={drawerOpen} onClose={onClose}>
+      <MyDrawer open={drawerOpen} onClose={onClose} title="Editar Cadastro Rápido">
         <Form
           form={form}
           layout="vertical"
@@ -113,108 +136,104 @@ export default function CardPaciente({
           <Form.Item
             label="Nome do Paciente"
             name="nomePaciente"
-            rules={[{ required: true, message: "Campo obrigatório" }]}
+            rules={[
+              { required: true, message: "O nome é obrigatório!" },
+              { min: 3, message: "O nome deve ter no mínimo 3 caracteres!" },
+              { max: 50, message: "O nome deve ter no máximo 50 caracteres!" }
+            ]}
           >
             <Input placeholder="Digite o nome do paciente" />
           </Form.Item>
+          
           <Form.Item
             label="Telefone (opcional)"
             name="telefone"
             rules={[
               {
-                pattern: /^\d{11}$/,
-                message: "Formato inválido. Ex: 11987654321",
+                pattern: /^\d{10,11}$/,
+                message: "Formato inválido. Use apenas DDD e números (ex: 11987654321)",
               },
             ]}
           >
-            <Input placeholder="Apenas números" />
+            <Input placeholder="Apenas números com DDD" maxLength={11} />
           </Form.Item>
+          
           <Form.Item
             label="E-mail"
             name="email"
             rules={[
-              { required: true, message: "Campo obrigatório" },
-              { type: "email", message: "E-mail inválido" },
+              { required: true, message: "O e-mail é obrigatório!" },
+              { type: "email", message: "Formato de e-mail inválido!" },
+              { max: 50, message: "E-mail pode ter no máximo 50 caracteres!" }
             ]}
           >
             <Input placeholder="Digite o e-mail do paciente" type="email" />
           </Form.Item>
 
-          <ButtonSubmit>Editar Paciente</ButtonSubmit>
+          <ButtonSubmit style={{ marginTop: 16 }}>Editar Paciente</ButtonSubmit>
           <ButtonDelete click={deletePacienteHandler}>Excluir Paciente</ButtonDelete>
 
           {/* Seção de Botões de Atalho para Abas */}
           <div style={{ width: '100%', marginTop: '24px' }}>
             <Row gutter={[12, 12]}>
-              {/* Perfil - Key 1 */}
               <Col span={24}>
                 <Link to={`/pacientes/dates`} state={{ activeTab: '1', id: paciente.id, paciente }} style={{ width: '100%' }}>
                   <ButtonSecoundary style={{ width: '100%' }}>Perfil</ButtonSecoundary>
                 </Link>
               </Col>
 
-              {/* Instrumentos - Key 2 */}
               <Col span={12}>
                 <Link to={`/pacientes/dates`} state={{ activeTab: '2', id: paciente.id, paciente }} style={{ width: '100%' }}>
                   <ButtonSecoundary style={{ width: '100%' }}>Instrumentos</ButtonSecoundary>
                 </Link>
               </Col>
 
-              {/* Prontuário - Key 3 */}
               <Col span={12}>
                 <Link to={`/pacientes/dates`} state={{ activeTab: '3', id: paciente.id, paciente }} style={{ width: '100%' }}>
                   <ButtonSecoundary style={{ width: '100%' }}>Prontuário</ButtonSecoundary>
                 </Link>
               </Col>
 
-              {/* Anotações de Sessão - Key 4 */}
               <Col span={12}>
                 <Link to={`/pacientes/dates`} state={{ activeTab: '4', id: paciente.id, paciente }} style={{ width: '100%' }}>
                   <ButtonSecoundary style={{ width: '100%' }}>Anotações de Sessão</ButtonSecoundary>
                 </Link>
               </Col>
 
-              {/* Agenda - Key 5 */}
               <Col span={12}>
                 <Link to={`/pacientes/dates`} state={{ activeTab: '5', id: paciente.id, paciente }} style={{ width: '100%' }}>
                   <ButtonSecoundary style={{ width: '100%' }}>Agenda</ButtonSecoundary>
                 </Link>
               </Col>
 
-              {/* Financeiro - Key 6 */}
               <Col span={12}>
                 <Link to={`/pacientes/dates`} state={{ activeTab: '6', id: paciente.id, paciente }} style={{ width: '100%' }}>
                   <ButtonSecoundary style={{ width: '100%' }}>Financeiro</ButtonSecoundary>
                 </Link>
               </Col>
 
-              {/* Diário de Bordo - Key 7 */}
               <Col span={12}>
                 <Link to={`/pacientes/dates`} state={{ activeTab: '7', id: paciente.id, paciente }} style={{ width: '100%' }}>
                   <ButtonSecoundary style={{ width: '100%' }}>Diário de Bordo</ButtonSecoundary>
                 </Link>
               </Col>
 
-              {/* Documentos - Key 8 */}
               <Col span={12}>
                 <Link to={`/pacientes/dates`} state={{ activeTab: '8', id: paciente.id, paciente }} style={{ width: '100%' }}>
                   <ButtonSecoundary style={{ width: '100%' }}>Documentos</ButtonSecoundary>
                 </Link>
               </Col>
 
-              {/* Anexos - Key 9 */}
               <Col span={12}>
                 <Link to={`/pacientes/dates`} state={{ activeTab: '9', id: paciente.id, paciente }} style={{ width: '100%' }}>
                   <ButtonSecoundary style={{ width: '100%' }}>Anexos</ButtonSecoundary>
                 </Link>
               </Col>
 
-              {/* Arquivar */}
               <Col span={12}>
                 <ButtonSecoundary style={{ width: '100%' }}>Arquivar</ButtonSecoundary>
               </Col>
 
-              {/* Whatsapp */}
               <Col span={12}>
                 <ButtonWhatsapp style={{ width: '100%' }}>
                   Whatsapp
