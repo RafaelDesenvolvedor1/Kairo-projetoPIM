@@ -17,6 +17,7 @@ module.exports = (app) => {
     logsAcesso: Logs_Acesso,
     equipe: Equipe,
     locais: Locais,
+    locaisEnderecos: LocaisEnderecos,
     servicos: Servicos,
     horarios: Horarios,
   } = models;
@@ -97,5 +98,9 @@ module.exports = (app) => {
   if (Locais) {
     if (Users) Locais.belongsTo(Users, { foreignKey: 'id_usuario', as: 'usuario' });
     if (Horarios) Locais.hasMany(Horarios, { foreignKey: 'id_local', as: 'horarios' });
+    if (LocaisEnderecos) {
+      Locais.belongsTo(LocaisEnderecos, { foreignKey: 'id_endereco', as: 'endereco' });
+      LocaisEnderecos.hasOne(Locais, { foreignKey: 'id_endereco', as: 'local' });
+    }
   }
 };

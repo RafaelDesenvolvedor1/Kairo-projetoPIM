@@ -12,13 +12,17 @@ module.exports = (app) => {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
+    id_endereco: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'Locais_Enderecos',
+        key: 'id_endereco',
+      },
+    },
     nome: {
       type: DataTypes.STRING,
       allowNull: false,
-    },
-    endereco: {
-      type: DataTypes.TEXT,
-      allowNull: true,
     },
     ativo: {
       type: DataTypes.BOOLEAN,
