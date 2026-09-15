@@ -1,3 +1,8 @@
+const {
+  validarCriacaoServico,
+  validarAtualizacaoServico,
+} = require('../validate/servicosValidate');
+
 module.exports = (app) => {
   const Servicos = app.models.servicos || app.models.Servicos;
 
@@ -6,8 +11,14 @@ module.exports = (app) => {
     .all(app.auth.authenticate())
     .get(async (req, res) => {
       try {
+        const where = { id_usuario: req.user.id_usuario };
+
+        if (req.query.ativo !== undefined) {
+          where.ativo = req.query.ativo === 'true';
+        }
+
         const result = await Servicos.findAll({
-          where: { id_usuario: req.user.id_usuario },
+          where,
           order: [['nome', 'ASC']],
         });
         res.json(result);
@@ -15,7 +26,7 @@ module.exports = (app) => {
         res.status(412).json({ msg: err.message });
       }
     })
-    .post(async (req, res) => {
+    .post(validarCriacaoServico, async (req, res) => {
       try {
         req.body.id_usuario = req.user.id_usuario;
         const result = await Servicos.create(req.body);
@@ -43,7 +54,7 @@ module.exports = (app) => {
         res.status(412).json({ msg: err.message });
       }
     })
-    .put(async (req, res) => {
+    .put(validarAtualizacaoServico, async (req, res) => {
       try {
         const { id } = req.params;
         delete req.body.id_usuario;
