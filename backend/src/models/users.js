@@ -64,6 +64,14 @@ module.exports = (app) => {
             type: DataTypes.DATE,
             allowNull: true,
         },
+        slug: {
+        type: DataTypes.STRING(100),
+        allowNull: true,
+        unique: true,
+        validate: {
+            is: /^[a-z0-9-]+$/, // Garante apenas letras minúsculas, números e hífens
+        },
+        },
     }, {
         tableName: 'Usuarios',
         timestamps: false,
