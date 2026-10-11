@@ -2,7 +2,7 @@ const jwt = require('jwt-simple');
 const config = require('../config/config.js');
 
 module.exports = (app) => {
-    const Users = app.db.models.User;
+    const Users = app.db.models.Users;
     const { secret } = config.jwt;
 
     return {
