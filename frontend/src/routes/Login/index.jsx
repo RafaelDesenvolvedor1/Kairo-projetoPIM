@@ -149,9 +149,9 @@ export default () => {
                 Entrar
               </ButtonSubmit>
 
-              <Divider style={{ margin: "16px 0" }}>OU</Divider>
+              {/*<Divider style={{ margin: "16px 0" }}>OU</Divider>
 
-              {/* <ButtonSecoundary 
+               <ButtonSecoundary 
                 block 
                 size="large"
                 icon={<GoogleOutlined />}
