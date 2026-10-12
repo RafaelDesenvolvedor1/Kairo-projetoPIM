@@ -31,7 +31,7 @@ const App = () => {
               color: "#fff",
             }}
           />
-          <MySearchInput />
+          {/* <MySearchInput /> */}
           <MyUser />
         </MyHeader>
         <MessageProvider>
