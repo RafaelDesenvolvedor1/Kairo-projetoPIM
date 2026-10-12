@@ -1,18 +1,49 @@
 import React, { useState, useEffect } from 'react';
-import { Typography, List, Space, Tag, Empty, Spin, Divider, Button, Popconfirm, Tooltip, message, Modal, DatePicker, TimePicker, Form } from 'antd'; 
-import { ClockCircleOutlined, SwapRightOutlined, EditOutlined, DeleteOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
-import { AgendaContainer, AppointmentItem, DateBadge, AppointmentInfo } from './styles';
+import {
+  Typography,
+  List,
+  Space,
+  Tag,
+  Empty,
+  Spin,
+  Divider,
+  Button,
+  Popconfirm,
+  Tooltip,
+  message,
+  Modal,
+  DatePicker,
+  TimePicker,
+  Form,
+} from 'antd';
+import {
+  ClockCircleOutlined,
+  SwapRightOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+} from '@ant-design/icons';
+import {
+  AgendaContainer,
+  AppointmentItem,
+  DateBadge,
+  AppointmentInfo,
+} from './styles';
 import agendamentosService from '../../../../services/agendamentosService';
 import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import 'dayjs/locale/pt-br';
 
+dayjs.extend(utc);
 dayjs.locale('pt-br');
+
 const { Text } = Typography;
 
 export default function TabAgenda({ idPaciente }) {
   const [loading, setLoading] = useState(false);
   const [appointments, setAppointments] = useState([]);
-  
+
   // States para o Modal de Edição
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
@@ -20,34 +51,33 @@ export default function TabAgenda({ idPaciente }) {
 
   const fetchAppointments = async () => {
     if (!idPaciente) {
-        console.warn("TabAgenda: idPaciente não foi fornecido ou é inválido:", idPaciente);
-        return;
+      console.warn("TabAgenda: idPaciente não foi fornecido ou é inválido:", idPaciente);
+      return;
     }
-    
-    console.log("TabAgenda: Disparando busca para o paciente ID:", idPaciente);
-    
+
     setLoading(true);
     try {
       const resultado = await agendamentosService.listarAgendamentosPorPaciente(idPaciente);
-      
+
       if (resultado.success) {
-        const dadosFormatados = (resultado.data || []).map(agendamento => {
-          const inicio = dayjs(agendamento.data_hora_inicio);
-          const fim = dayjs(agendamento.data_hora_fim);
-          
+        const dadosFormatados = (resultado.data || []).map((agendamento) => {
+          // dayjs.utc impede a subtração de 3 horas do fuso local
+          const inicio = dayjs.utc(agendamento.data_hora_inicio);
+          const fim = dayjs.utc(agendamento.data_hora_fim);
+
           return {
             id: agendamento.id_agendamento,
             dia: inicio.format('DD'),
             mesAno: inicio.format('MMM.YY').toUpperCase(),
             startTime: inicio.format('HH:mm'),
             endTime: fim.format('HH:mm'),
-            value: 'R$ 0', 
+            value: 'R$ 0',
             status: agendamento.status ? agendamento.status.toUpperCase() : 'AGENDADO',
             patient: agendamento.paciente?.nomePaciente || 'Paciente',
-            raw: agendamento 
+            raw: agendamento,
           };
         });
-        
+
         setAppointments(dadosFormatados);
       } else {
         message.error("Erro ao carregar agendamentos: " + resultado.message);
@@ -82,15 +112,15 @@ export default function TabAgenda({ idPaciente }) {
   // Abre o modal carregando os horários atuais do agendamento
   const handleEditar = (item) => {
     setEditingItem(item);
-    
-    const dataHoraInicio = dayjs(item.raw.data_hora_inicio);
-    const dataHoraFim = dayjs(item.raw.data_hora_fim);
+
+    const dataHoraInicio = dayjs.utc(item.raw.data_hora_inicio);
+    const dataHoraFim = dayjs.utc(item.raw.data_hora_fim);
 
     form.setFieldsValue({
       data: dataHoraInicio,
-      horarios: [dataHoraInicio, dataHoraFim]
+      horarios: [dataHoraInicio, dataHoraFim],
     });
-    
+
     setIsEditModalOpen(true);
   };
 
@@ -101,33 +131,22 @@ export default function TabAgenda({ idPaciente }) {
       const seletorInicio = values.horarios[0];
       const seletorFim = values.horarios[1];
 
-      // CORREÇÃO DEFINITIVA: Clona e utiliza o método .set() para isolar os estados e evitar mutações cruzadas do objeto original
-      const dataHoraInicioObjeto = novaDataBase
-        .clone()
-        .set('hour', seletorInicio.hour())
-        .set('minute', seletorInicio.minute())
-        .set('second', 0);
+      const dataStr = novaDataBase.format('YYYY-MM-DD');
+      const horaIniStr = seletorInicio.format('HH:mm');
+      const horaFimStr = seletorFim.format('HH:mm');
 
-      const dataHoraFimObjeto = novaDataBase
-        .clone()
-        .set('hour', seletorFim.hour())
-        .set('minute', seletorFim.minute())
-        .set('second', 0);
-
-      // Gera as strings no padrão ISO esperado pelas queries do Sequelize no backend
+      // Gera a string exata no padrão da base de dados sem desfasamento
       const payload = {
-        data_hora_inicio: dataHoraInicioObjeto.toISOString(),
-        data_hora_fim: dataHoraFimObjeto.toISOString(),
+        data_hora_inicio: `${dataStr} ${horaIniStr}:00`,
+        data_hora_fim: `${dataStr} ${horaFimStr}:00`,
       };
-
-      console.log("Kairo TabAgenda Reagendamento - Payload construído com sucesso:", payload);
 
       const resultado = await agendamentosService.atualizarAgendamento(editingItem.id, payload);
 
       if (resultado.success) {
         message.success("Horário do agendamento atualizado!");
         setIsEditModalOpen(false);
-        fetchAppointments(); 
+        fetchAppointments();
       } else {
         message.error("Não foi possível reagendar: " + resultado.message);
       }
@@ -140,7 +159,7 @@ export default function TabAgenda({ idPaciente }) {
   const handleMudarStatus = async (id, novoStatus) => {
     try {
       const resultado = await agendamentosService.atualizarAgendamento(id, {
-        status: novoStatus
+        status: novoStatus,
       });
 
       if (resultado.success) {
@@ -157,10 +176,13 @@ export default function TabAgenda({ idPaciente }) {
 
   const getTagColor = (status) => {
     switch (status) {
-      case 'CONCLUIDO': return 'success';
-      case 'ATENDIDO': return 'success';
-      case 'CANCELADO': return 'error';
-      default: return 'processing';
+      case 'CONCLUIDO':
+      case 'ATENDIDO':
+        return 'success';
+      case 'CANCELADO':
+        return 'error';
+      default:
+        return 'processing';
     }
   };
 
@@ -204,30 +226,30 @@ export default function TabAgenda({ idPaciente }) {
 
             <Space size="middle" style={{ paddingRight: '10px' }}>
               <Tooltip title="Marcar como Atendido">
-                <Button 
-                  type="text" 
-                  shape="circle" 
-                  icon={<CheckCircleOutlined style={{ color: item.status === 'CONCLUIDO' ? '#bfbfbf' : '#52c41a' }} />} 
-                  disabled={item.status === 'CONCLUIDO' || item.status === 'CANCELADO'} 
+                <Button
+                  type="text"
+                  shape="circle"
+                  icon={<CheckCircleOutlined style={{ color: item.status === 'CONCLUIDO' ? '#bfbfbf' : '#52c41a' }} />}
+                  disabled={item.status === 'CONCLUIDO' || item.status === 'CANCELADO'}
                   onClick={() => handleMudarStatus(item.id, 'concluido')}
                 />
               </Tooltip>
 
               <Tooltip title="Cancelar Atendimento">
-                <Button 
-                  type="text" 
-                  shape="circle" 
-                  icon={<CloseCircleOutlined style={{ color: item.status === 'CANCELADO' ? '#bfbfbf' : '#ff4d4f' }} />} 
-                  disabled={item.status === 'CANCELADO' || item.status === 'CONCLUIDO'} 
+                <Button
+                  type="text"
+                  shape="circle"
+                  icon={<CloseCircleOutlined style={{ color: item.status === 'CANCELADO' ? '#bfbfbf' : '#ff4d4f' }} />}
+                  disabled={item.status === 'CANCELADO' || item.status === 'CONCLUIDO'}
                   onClick={() => handleMudarStatus(item.id, 'cancelado')}
                 />
               </Tooltip>
 
               <Tooltip title="Editar Horário">
-                <Button 
-                  type="text" 
-                  shape="circle" 
-                  icon={<EditOutlined style={{ color: '#1890ff' }} />} 
+                <Button
+                  type="text"
+                  shape="circle"
+                  icon={<EditOutlined style={{ color: '#1890ff' }} />}
                   onClick={() => handleEditar(item)}
                 />
               </Tooltip>
@@ -240,11 +262,11 @@ export default function TabAgenda({ idPaciente }) {
                   cancelText="Não"
                   placement="topRight"
                 >
-                  <Button 
-                    type="text" 
-                    shape="circle" 
-                    danger 
-                    icon={<DeleteOutlined />} 
+                  <Button
+                    type="text"
+                    shape="circle"
+                    danger
+                    icon={<DeleteOutlined />}
                   />
                 </Popconfirm>
               </Tooltip>

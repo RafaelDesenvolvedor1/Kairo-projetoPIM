@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Calendar, Drawer, Form, Input, TimePicker, Select, Spin, notification } from "antd";
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
 
 import ButtonSubmit from '../../components/ButtonSubmit';
 import agendamentosService from '../../services/agendamentosService'; 
@@ -9,6 +10,9 @@ import locaisService from '../../services/locaisService';
 import servicosService from '../../services/servicosService';
 import { useMessage } from "../../context/MessageProvider";
 import './style.css';
+
+// Ativa o plugin UTC para manipulação consistente de horários
+dayjs.extend(utc);
 
 export default function Agendamentos() {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -39,7 +43,7 @@ export default function Agendamentos() {
         agendamentosService.listarAgendamentos(),
         pacientesService.listarPacientes(),
         locaisService.getLocais(),
-        servicosService.getServicos()
+        servicosService.getServicos(),
       ]);
 
       if (agendRes.success) {
@@ -73,10 +77,14 @@ export default function Agendamentos() {
   const handleEdit = (record) => {
     setIsEditing(true);
     setEditingId(record.id_agendamento);
-    setSelectedDate(dayjs(record.data_hora_inicio));
+
+    // Lê a data usando UTC para manter a mesma hora literal do banco
+    const dataHoraObj = dayjs.utc(record.data_hora_inicio);
+    setSelectedDate(dataHoraObj);
+
     form.setFieldsValue({
       id_paciente: record.id_paciente,
-      hora: dayjs(record.data_hora_inicio),
+      hora: dataHoraObj,
       local: record.id_local,
       servico: record.id_servico,
       observacoes: record.observacoes,
@@ -96,17 +104,18 @@ export default function Agendamentos() {
     try {
       setLoading(true);
 
-      const dataHoraInicio = selectedDate
-        .set('hour', values.hora.hour())
-        .set('minute', values.hora.minute())
-        .set('second', 0);
+      const dataBaseStr = selectedDate.format('YYYY-MM-DD');
+      const horaIniStr = values.hora.format('HH:mm');
 
-      const dataHoraFim = dataHoraInicio.clone().add(30, 'minutes');
+      // Calcula o término somando 30 ou 60 minutos (mantendo o mesmo padrão)
+      const horaFimObj = values.hora.clone().add(30, 'minutes');
+      const horaFimStr = horaFimObj.format('HH:mm');
 
+      // Envia no formato MySQL "YYYY-MM-DD HH:mm:ss" sem deslocamento UTC
       const payload = {
         id_paciente: parseInt(values.id_paciente),
-        data_hora_inicio: dataHoraInicio.toISOString(),
-        data_hora_fim: dataHoraFim.toISOString(),
+        data_hora_inicio: `${dataBaseStr} ${horaIniStr}:00`,
+        data_hora_fim: `${dataBaseStr} ${horaFimStr}:00`,
         status: values.status || 'agendado',
         observacoes: values.observacoes || '',
         id_local: values.local ? parseInt(values.local) : null,
@@ -117,28 +126,30 @@ export default function Agendamentos() {
 
       if (isEditing) {
         result = await agendamentosService.atualizarAgendamento(editingId, payload);
-        
+
         if (result.success) {
           if (result.data?.sincronizadoGoogle) {
             notification.success({
               message: 'Agendamento Atualizado!',
               description: 'As alterações foram salvas e sincronizadas com o seu Google Agenda.',
               placement: 'topRight',
-              duration: 4
+              duration: 4,
             });
           } else {
             messageApi.success('Agendamento atualizado com sucesso!');
           }
 
-          const pacienteSelecionado = pacientes.find(p => p.id === parseInt(values.id_paciente));
-          setAgendamentos(agendamentos.map(a => 
-            a.id_agendamento === editingId 
-              ? {
-                  ...result.data.agendamento,
-                  paciente: pacienteSelecionado
-                }
-              : a
-          ));
+          const pacienteSelecionado = pacientes.find((p) => p.id === parseInt(values.id_paciente));
+          setAgendamentos(
+            agendamentos.map((a) =>
+              a.id_agendamento === editingId
+                ? {
+                    ...result.data.agendamento,
+                    paciente: pacienteSelecionado,
+                  }
+                : a
+            )
+          );
           onClose();
         } else {
           const errorMessage = result.message || 'Erro ao atualizar agendamento';
@@ -157,17 +168,20 @@ export default function Agendamentos() {
               message: 'Agendamento Confirmado!',
               description: 'A consulta foi registrada no sistema e sincronizada no seu Google Agenda.',
               placement: 'topRight',
-              duration: 4.5
+              duration: 4.5,
             });
           } else {
             messageApi.success('Agendamento criado com sucesso!');
           }
 
-          const pacienteSelecionado = pacientes.find(p => p.id === parseInt(values.id_paciente));
-          setAgendamentos([...agendamentos, {
-            ...result.data.agendamento,
-            paciente: pacienteSelecionado
-          }]);
+          const pacienteSelecionado = pacientes.find((p) => p.id === parseInt(values.id_paciente));
+          setAgendamentos([
+            ...agendamentos,
+            {
+              ...result.data.agendamento,
+              paciente: pacienteSelecionado,
+            },
+          ]);
           onClose();
         } else {
           const errorMessage = result.message || 'Erro ao criar agendamento';
@@ -201,23 +215,23 @@ export default function Agendamentos() {
   };
 
   const dateCellRender = (date) => {
+    // Filtra comparando data usando UTC para coincidir perfeitamente com o dia
     const eventosDoDia = agendamentos.filter((e) =>
-      dayjs(e.data_hora_inicio).isSame(date, "day")
+      dayjs.utc(e.data_hora_inicio).isSame(date, "day")
     );
 
     if (eventosDoDia.length === 0) return null;
 
     return (
-
       <div className="event-cell">
         {eventosDoDia.map((evento, index) => {
-          const horaFormatada = dayjs(evento.data_hora_inicio).format("HH:mm");
-          
+          const horaFormatada = dayjs.utc(evento.data_hora_inicio).format("HH:mm");
+
           return (
             <div key={index} className="event-item" onClick={() => handleEdit(evento)}>
               <span className={`dot ${getDotClassByStatus(evento.status)}`} />
               <span className="event-name">
-                <strong>{horaFormatada}</strong> - {evento.paciente?.nomePaciente || 'Sem paciente'}
+                <strong>{horaFormatada}</strong> - {evento.paciente?.nomePaciente || evento.paciente?.nome_paciente || 'Sem paciente'}
               </span>
             </div>
           );
@@ -250,8 +264,8 @@ export default function Agendamentos() {
         open={drawerOpen}
       >
         <Spin spinning={loading}>
-          <Form 
-            layout="vertical" 
+          <Form
+            layout="vertical"
             onFinish={handleSubmit}
             form={form}
           >
@@ -262,7 +276,10 @@ export default function Agendamentos() {
             >
               <Select
                 placeholder="Selecione um paciente"
-                options={pacientes.map(p => ({ label: p.nomePaciente, value: p.id }))}
+                options={pacientes.map((p) => ({
+                  label: p.nomePaciente || p.nome_paciente,
+                  value: p.id,
+                }))}
               />
             </Form.Item>
 
@@ -284,7 +301,7 @@ export default function Agendamentos() {
               <Select
                 placeholder="Selecione um local (opcional)"
                 allowClear
-                options={locais.map(l => ({ label: l.nome, value: l.id_local }))}
+                options={locais.map((l) => ({ label: l.nome, value: l.id_local }))}
               />
             </Form.Item>
 
@@ -295,7 +312,7 @@ export default function Agendamentos() {
               <Select
                 placeholder="Selecione um serviço (opcional)"
                 allowClear
-                options={servicos.map(s => ({ label: s.nome, value: s.id_servico }))}
+                options={servicos.map((s) => ({ label: s.nome, value: s.id_servico }))}
               />
             </Form.Item>
 
