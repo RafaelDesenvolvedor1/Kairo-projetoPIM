@@ -25,8 +25,21 @@ const getIniciais = (nome) => {
 
 const formatarHora = (dataString) => {
   if (!dataString) return '--:--';
+  
+  // Se vier no formato "2026-10-12 14:30:00" ou "2026-10-12T14:30:00"
+  if (typeof dataString === 'string') {
+    const horaMatch = dataString.match(/(\d{2}):(\d{2})/);
+    // Se for formato ISO com T ou espaço, pega o trecho de hora direto para evitar distorção de fuso
+    const partes = dataString.split(/[T ]/);
+    if (partes[1]) {
+      return partes[1].substring(0, 5); // Retorna "HH:mm" exato sem mudar timezone
+    }
+  }
+
   const data = new Date(dataString);
-  return data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  return isNaN(data.getTime())
+    ? '--:--'
+    : data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
 };
 
 const formatarData = (dataString) => {
@@ -69,14 +82,24 @@ export default function Home() {
           financeirosService.getLancamentosEmAberto()
         ]);
 
-        // 1. Processa agendamentos de hoje
+       // 1. Processa agendamentos de hoje
         if (resHoje.success && resHoje.data) {
           const dadosFormatados = resHoje.data.map(agendamento => {
-            const nomePaciente = agendamento.paciente?.nomePaciente || 'Paciente';
+            const nomePaciente =
+              agendamento.paciente?.nomePaciente ||
+              agendamento.paciente?.nome ||
+              agendamento.nomePaciente ||
+              'Paciente';
+
+            const rawHorario =
+              agendamento.data_hora_inicio ||
+              agendamento.horario ||
+              agendamento.hora_inicio;
+
             return {
               iniciais: getIniciais(nomePaciente),
               nome: nomePaciente,
-              horario: formatarHora(agendamento.data_hora_inicio)
+              horario: formatarHora(rawHorario)
             };
           });
           setAgendamentosHoje(dadosFormatados);
@@ -162,12 +185,12 @@ export default function Home() {
         </Col>
       </Row>
 
-      {/* Renderização Dinâmica dos Cards */}
+        {/* Renderização Dinâmica dos Cards */}
       <Row gutter={[24, 24]}>
         {dashCards.map((card) => {
           const ComponenteCard = card.component;
           return (
-            <Col xs={24} md={12} lg={8} key={card.id}>
+            <Col xs={24} md={24} lg={12} key={card.id}>
               <Spin spinning={loading}>
                 <ComponenteCard agendamentos={card.data} />
               </Spin>
