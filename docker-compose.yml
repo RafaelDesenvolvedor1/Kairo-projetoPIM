@@ -27,7 +27,7 @@ services:
     ports:
       - "8080:8080"
     environment:
-      ADMINER_DEFAULT_SERVER: mysql # Já pré-seleciona e aponta para o container do MariaDB/MySQL
+      ADMINER_DEFAULT_SERVER: mysql
     depends_on:
       mysql:
         condition: service_healthy
@@ -35,16 +35,18 @@ services:
       - projeto-pim-network
 
   backend:
-    build: .
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: projeto-pim-backend
     restart: unless-stopped
     volumes:
-      - ./backend:/app           # Sincroniza sua pasta backend local com o container
-      - /app/node_modules          # Protege os módulos instalados no container
+      - ./backend:/app
+      - /app/node_modules
     working_dir: /app
-    command: npm run dev             # Executa o script de desenvolvimento
+    command: npm run dev
     env_file:
-      - .env                      # Aponta para o .env da raiz
+      - .env
     environment:
       DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT}
@@ -67,8 +69,8 @@ services:
     restart: unless-stopped
     working_dir: /app
     volumes:
-      - ./frontend:/app             # Sincroniza sua pasta frontend local
-      - /app/node_modules           # Protege os módulos do frontend
+      - ./frontend:/app
+      - /app/node_modules
     environment:
       - VITE_API_PORT=${VITE_API_PORT}
       - VITE_API_URL=${VITE_API_URL}
