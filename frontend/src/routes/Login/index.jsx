@@ -151,7 +151,7 @@ export default () => {
 
               <Divider style={{ margin: "16px 0" }}>OU</Divider>
 
-              <ButtonSecoundary 
+              {/* <ButtonSecoundary 
                 block 
                 size="large"
                 icon={<GoogleOutlined />}
@@ -161,7 +161,7 @@ export default () => {
                 }}
               >
                 Entrar com Google
-              </ButtonSecoundary>
+              </ButtonSecoundary> */}
             </Form>
           </Card>
         </div>
