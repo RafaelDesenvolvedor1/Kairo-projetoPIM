@@ -9,6 +9,8 @@ import { FaUserGroup, FaMoneyBillTrendUp, FaCalendar, FaHeart, FaCheck, FaDollar
 import { Link } from "react-router";
 import agendamentosService from '../../services/agendamentosService';
 import financeirosService from '../../services/financeirosService';
+import SharePublicLink from '../../components/SharePublicLink';
+import authService from '../../services/authService';
 
 const { Text } = Typography;
 
@@ -49,6 +51,8 @@ export default function Home() {
   const [dadosGrafico, setDadosGrafico] = useState([]);
   const [lancamentosEmAberto, setLancamentosEmAberto] = useState([]);
   const [loading, setLoading] = useState(true);
+  const currentUser = authService.getCurrentUser();
+
 
   useEffect(() => {
     const carregarDadosDashboard = async () => {
@@ -124,7 +128,9 @@ export default function Home() {
 
   return (
     <Space direction="vertical" style={{ width: '100%', padding: '20px' }} size={32}>
-      <CustomTitle>Bem vindo, Rafael!</CustomTitle>
+      <CustomTitle>Bem vindo, {currentUser?.nome || 'usuário'}!</CustomTitle>
+
+      <SharePublicLink />
 
       {/* Seção 1: Acesso Rápido */}
       <Row gutter={[24, 24]} justify="start">
