@@ -34,3 +34,20 @@ Thumbs.db
 
 # Documentation
 docs
+
+
+# Relatórios de Testes de Segurança (SAST, DAST, SCA)
+relatorio-sca*.json
+relatorio-sast*.json
+relatorio-dast*.html
+relatorio-dast*.json
+
+# Evidências e relatórios do OWASP ZAP
+zap.log
+zap_out.json
+
+# Cobertura de código e testes
+coverage/
+*.lcov
+
+zap.yaml
