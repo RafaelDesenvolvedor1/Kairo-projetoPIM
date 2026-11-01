@@ -15,23 +15,42 @@ ENV VITE_API_PORT=$VITE_API_PORT
 
 RUN npm run build
 
-# Etapa 2: Servidor Nginx com Proxy Reverso
+# Etapa 2: Servidor Nginx com Proxy Reverso e Otimizações de Cache
 FROM nginx:alpine
 
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Configuração do Nginx tratando SPA e repassando /api para o backend
+# Configuração do Nginx: SPA, Cache de estáticos, Gzip e Proxy Reverso para /api
 RUN echo 'server { \
     listen 80; \
+    root /usr/share/nginx/html; \
+    index index.html; \
     \
-    # Roteamento SPA (React Router) \
-    location / { \
-        root /usr/share/nginx/html; \
-        index index.html; \
-        try_files $uri $uri/ /index.html; \
+    # Habilitar compressão Gzip para diminuir tamanho de transferência \
+    gzip on; \
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript image/svg+xml; \
+    \
+    # 1. Regra para robots.txt e sitemap (não devem passar pelo fallback do React) \
+    location ~* ^/(robots\.txt|sitemap\.xml)$ { \
+        try_files $uri =404; \
+        access_log off; \
+        log_not_found off; \
     } \
     \
-    # Proxy reverso: repassa chamadas /api para o container do backend \
+    # 2. Ativos estáticos com hash (JS, CSS, Imagens, Fontes) com Cache de 1 ano \
+    location ~* \.(?:js|css|woff2?|svg|png|jpg|jpeg|gif|ico|webp)$ { \
+        expires 1y; \
+        add_header Cache-Control "public, max-age=31536000, immutable"; \
+        access_log off; \
+    } \
+    \
+    # 3. Roteamento SPA: o index.html não deve ter cache rígido para permitir deploys \
+    location / { \
+        try_files $uri $uri/ /index.html; \
+        add_header Cache-Control "no-cache, no-store, must-revalidate"; \
+    } \
+    \
+    # 4. Proxy reverso: repassa chamadas /api para o container do backend \
     location /api/ { \
         proxy_pass http://backend:3000/; \
         proxy_http_version 1.1; \
