@@ -16,32 +16,11 @@ export default defineConfig({
     },
   },
   build: {
+    // Mantém a compilação orientada a browsers modernos (elimina polyfills legados)
     target: 'es2020',
     cssCodeSplit: true,
     sourcemap: false,
     minify: 'esbuild',
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (id.includes('node_modules')) {
-            // Mantém React e Ant Design juntos no mesmo ciclo de vida
-            if (
-              id.includes('react') ||
-              id.includes('react-dom') ||
-              id.includes('react-router') ||
-              id.includes('antd') ||
-              id.includes('@ant-design') ||
-              id.includes('@rc-component') ||
-              id.includes('rc-')
-            ) {
-              return 'vendor-framework';
-            }
-            // Outras dependências auxiliares (ex: axios, dayjs, etc.)
-            return 'vendor-utils';
-          }
-        },
-      },
-    },
-    chunkSizeWarningLimit: 1200,
+    chunkSizeWarningLimit: 1500,
   },
 });
