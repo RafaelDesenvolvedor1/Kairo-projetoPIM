@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
-import { Layout, Card, Form, Input, Button, Checkbox, Typography, Divider } from "antd";
-import { UserOutlined, LockOutlined, MailOutlined, GoogleOutlined } from "@ant-design/icons";
+import { Layout, Card, Form, Input, Checkbox, Typography } from "antd";
+import { UserOutlined, LockOutlined, MailOutlined } from "@ant-design/icons";
 import ButtonSubmit from "../../components/ButtonSubmit";
 import ButtonSecoundary from "../../components/ButtonSecoundary";
 import { useNavigate, Link } from "react-router";
@@ -21,21 +21,12 @@ export default () => {
     const nome = params.get('nome');
 
     if (token) {
-      // Salvar token no localStorage com a mesma chave do login local
       localStorage.setItem('token', token);
-      
-      // Salvar nome do usuário se fornecido
       if (nome) {
         localStorage.setItem('nome', nome);
       }
-
-      // Limpar a URL de query strings
       window.history.replaceState({}, document.title, window.location.pathname);
-
-      // Redirecionar para a rota interna
       navigate('/');
-      
-      // Notificar sucesso
       messageApi.success('Login com Google realizado com sucesso!');
     }
   }, [navigate, messageApi]);
@@ -74,20 +65,19 @@ export default () => {
             padding: 40,
           }}
         >
-          <Title style={{ color: "#fff", marginBottom: 16 }}>
+          <Title level={1} style={{ color: "#fff", marginBottom: 16 }}>
             Bem-vindo de volta!
           </Title>
 
-          <Text style={{ color: "#e6f4ff", marginBottom: 32 }}>
+          <Text style={{ color: "#e6f4ff", marginBottom: 32, fontSize: "16px" }}>
             Acesse sua conta para continuar
           </Text>
 
-          <Link to='/cadastro'>
-            <ButtonSecoundary >
+          <Link to="/cadastro" aria-label="Ir para a página de cadastro">
+            <ButtonSecoundary>
               Cadastrar
             </ButtonSecoundary>
           </Link>
-
         </div>
 
         {/* LADO DIREITO */}
@@ -105,32 +95,46 @@ export default () => {
             bordered={false}
           >
             <div style={{ textAlign: "center", marginBottom: 24 }}>
-              <UserOutlined style={{ fontSize: 48, color: "#1677ff" }} />
-              <Title level={4} style={{ marginTop: 8 }}>
-                Username
+              {/* aria-hidden para o ícone decorativo não poluir o leitor de tela */}
+              <UserOutlined aria-hidden="true" style={{ fontSize: 48, color: "#1677ff" }} />
+              <Title level={2} style={{ marginTop: 8 }}>
+                Identificação
               </Title>
             </div>
 
-            <Form layout="vertical" onFinish={onFinish}>
+            <Form layout="vertical" onFinish={onFinish} requiredMark="optional">
               <Form.Item
                 label="Email"
                 name="email"
-                rules={[{ required: true, message: "Informe seu email" }]}
+                htmlFor="login-email"
+                rules={[
+                  { required: true, message: "Informe seu email" },
+                  { type: "email", message: "Informe um email válido" }
+                ]}
               >
                 <Input
-                  prefix={<MailOutlined />}
+                  id="login-email"
+                  prefix={<MailOutlined aria-hidden="true" />}
                   placeholder="email@exemplo.com"
+                  autoComplete="username email"
+                  aria-required="true"
+                  aria-label="Endereço de e-mail"
                 />
               </Form.Item>
 
               <Form.Item
                 label="Senha"
                 name="password"
+                htmlFor="login-password"
                 rules={[{ required: true, message: "Informe sua senha" }]}
               >
                 <Input.Password
-                  prefix={<LockOutlined />}
+                  id="login-password"
+                  prefix={<LockOutlined aria-hidden="true" />}
                   placeholder="********"
+                  autoComplete="current-password"
+                  aria-required="true"
+                  aria-label="Senha de acesso"
                 />
               </Form.Item>
 
@@ -138,34 +142,26 @@ export default () => {
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
+                  alignItems: "center",
                   marginBottom: 16,
                 }}
               >
-                <Checkbox>Manter conectado</Checkbox>
-                <Link>Esqueci a senha</Link>
+                <Checkbox id="remember-me" aria-label="Manter conectado neste dispositivo">
+                  Manter conectado
+                </Checkbox>
+                {/* Atributo 'to' definido para evitar link âncora inválido */}
+                <Link to="/recuperar-senha" aria-label="Recuperar senha de acesso">
+                  Esqueci a senha
+                </Link>
               </div>
 
-              <ButtonSubmit block>
+              <ButtonSubmit block aria-label="Entrar no sistema">
                 Entrar
               </ButtonSubmit>
-
-              {/*<Divider style={{ margin: "16px 0" }}>OU</Divider>
-
-               <ButtonSecoundary 
-                block 
-                size="large"
-                icon={<GoogleOutlined />}
-                onClick={() => window.location.href = 'http://localhost:3000/auth/google'}
-                style={{
-                  fontWeight: 'bold'
-                }}
-              >
-                Entrar com Google
-              </ButtonSecoundary> */}
             </Form>
           </Card>
         </div>
       </Content>
     </Layout>
   );
-}
+};

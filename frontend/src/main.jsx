@@ -1,99 +1,126 @@
-import { StrictMode } from "react";
+import { StrictMode, Suspense, lazy } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App.jsx";
 
-import { ConfigProvider } from "antd";
-
+import { ConfigProvider, Spin } from "antd";
 import "antd/dist/reset.css";
 
-
 import { createBrowserRouter, RouterProvider } from "react-router";
-import Home from "./routes/Home/Home.jsx";
-import Pacientes from "./routes/Pacientes/Pacientes.jsx";
-import Financeiro from "./routes/Financeiro/index.jsx";
-import Agendamentos from "./routes/Agendamentos/index.jsx";
+
+// 1. Rota crítica inicial de autenticação: import estático/imediato
 import Login from "./routes/Login/index.jsx";
-import Cadastro from "./routes/Cadastro/index.jsx";
-import Locais from "./routes/Locais/index.jsx";
-import Servicos from "./routes/Servicos/index.jsx";
-import Horarios from "./routes/Horarios/index.jsx";
-import PacientesDates from "./routes/PacientesDates/index.jsx";
-import PublicProfile from './routes/PublicProfile/index.jsx';
+
+// 2. Componentes auxiliares de layout e proteção
 import ProtectedRoute from "./components/ProtectedRoute/index.jsx";
 import { MessageProvider } from "./context/MessageProvider";
 
-const router = createBrowserRouter(
-  [
-    {
-      path: "/",
-      element: <ProtectedRoute><App /></ProtectedRoute>,
-      children: [
-        {
-          path: "/",
-          element: <Home />
-        },
-        {
-          path: "pacientes",
-          element: <Pacientes />
-        },
-        {
-          path: "pacientes/dates",
-          element: <PacientesDates />
-        },
-        {
-          path: "financeiro",
-          element: <Financeiro />
-        },
-        {
-          path: "agendamentos",
-          element: <Agendamentos />
-        },
-        {
-          path: "locais",
-          element: <Locais />
-        },
-        {
-          path: "servicos",
-          element: <Servicos />
-        },
-        {
-          path: "horarios",
-          element: <Horarios />
-        },
-      ],
-    },
-    {
-      path: "/p/:slug",
-      element: <PublicProfile />,
-    },
-    {
-      path: "/login",
-      element: <Login />
-    },
-    {
-      path: "/cadastro",
-      element: <Cadastro />
-    },
-  ]
+// 3. Demais rotas carregadas sob demanda (Code-Splitting)
+const Home = lazy(() => import("./routes/Home/Home.jsx"));
+const Pacientes = lazy(() => import("./routes/Pacientes/Pacientes.jsx"));
+const PacientesDates = lazy(() => import("./routes/PacientesDates/index.jsx"));
+const Financeiro = lazy(() => import("./routes/Financeiro/index.jsx"));
+const Agendamentos = lazy(() => import("./routes/Agendamentos/index.jsx"));
+const Locais = lazy(() => import("./routes/Locais/index.jsx"));
+const Servicos = lazy(() => import("./routes/Servicos/index.jsx"));
+const Horarios = lazy(() => import("./routes/Horarios/index.jsx"));
+const Cadastro = lazy(() => import("./routes/Cadastro/index.jsx"));
+const PublicProfile = lazy(() => import("./routes/PublicProfile/index.jsx"));
+
+// Fallback visual centralizado durante a transição de telas lazy
+const LoadingFallback = () => (
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      minHeight: "60vh",
+      width: "100%",
+    }}
+  >
+    <Spin size="large" />
+  </div>
 );
 
+// Wrapper reutilizável para injetar Suspense em rotas lazy
+const withSuspense = (Component) => (
+  <Suspense fallback={<LoadingFallback />}>
+    <Component />
+  </Suspense>
+);
+
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: (
+      <ProtectedRoute>
+        <App />
+      </ProtectedRoute>
+    ),
+    children: [
+      {
+        path: "/",
+        element: withSuspense(Home),
+      },
+      {
+        path: "pacientes",
+        element: withSuspense(Pacientes),
+      },
+      {
+        path: "pacientes/dates",
+        element: withSuspense(PacientesDates),
+      },
+      {
+        path: "financeiro",
+        element: withSuspense(Financeiro),
+      },
+      {
+        path: "agendamentos",
+        element: withSuspense(Agendamentos),
+      },
+      {
+        path: "locais",
+        element: withSuspense(Locais),
+      },
+      {
+        path: "servicos",
+        element: withSuspense(Servicos),
+      },
+      {
+        path: "horarios",
+        element: withSuspense(Horarios),
+      },
+    ],
+  },
+  {
+    path: "/p/:slug",
+    element: withSuspense(PublicProfile),
+  },
+  {
+    path: "/login",
+    element: <Login />, // Carrega instantaneamente sem Suspense extra
+  },
+  {
+    path: "/cadastro",
+    element: withSuspense(Cadastro),
+  },
+]);
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <ConfigProvider theme={{
-      token: {
-
-      },
-      components: {
-        Message: {
-          colorBgElevated: "#1f1f1f",   // fundo
-          colorText: "#fff",           // texto
-          colorSuccess: "#4caf50",     // cor da barra do sucesso
-          colorError: "#ff5252",       // erro
+    <ConfigProvider
+      theme={{
+        token: {},
+        components: {
+          Message: {
+            colorBgElevated: "#1f1f1f",
+            colorText: "#fff",
+            colorSuccess: "#4caf50",
+            colorError: "#ff5252",
+          },
         },
-      },
-    }}>
+      }}
+    >
       <MessageProvider>
         <RouterProvider router={router} />
       </MessageProvider>
