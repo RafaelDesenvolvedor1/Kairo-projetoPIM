@@ -16,34 +16,32 @@ export default defineConfig({
     },
   },
   build: {
-    // 1. Elimina os polyfills do Babel apontados no Lighthouse (economiza ~51 KiB)
     target: 'es2020',
     cssCodeSplit: true,
     sourcemap: false,
     minify: 'esbuild',
     rollupOptions: {
       output: {
-        // 2. Divide as dependências do node_modules em arquivos com cache persistente
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            // Isola o Ant Design e ícones (maior peso visual)
-            if (id.includes('antd') || id.includes('@ant-design')) {
-              return 'vendor-antd';
-            }
-            // Isola o núcleo do React e roteador
+            // Mantém React e Ant Design juntos no mesmo ciclo de vida
             if (
               id.includes('react') ||
               id.includes('react-dom') ||
-              id.includes('react-router')
+              id.includes('react-router') ||
+              id.includes('antd') ||
+              id.includes('@ant-design') ||
+              id.includes('@rc-component') ||
+              id.includes('rc-')
             ) {
-              return 'vendor-react';
+              return 'vendor-framework';
             }
-            // Demais bibliotecas auxiliares
-            return 'vendor-libs';
+            // Outras dependências auxiliares (ex: axios, dayjs, etc.)
+            return 'vendor-utils';
           }
         },
       },
     },
-    chunkSizeWarningLimit: 800,
+    chunkSizeWarningLimit: 1200,
   },
 });
