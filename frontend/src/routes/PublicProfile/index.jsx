@@ -236,7 +236,7 @@ export default () => {
           </div>
           <Title level={2} style={{ marginBottom: 4 }}>{profissional.nome}</Title>
           <Paragraph type="secondary" style={{ fontSize: 16 }}>
-            Atendimento Clínico & Especializado
+            Atendimento Clínico &amp; Especializado
           </Paragraph>
           <Button
             type="primary"

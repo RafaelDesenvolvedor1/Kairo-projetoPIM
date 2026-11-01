@@ -50,4 +50,6 @@ zap_out.json
 coverage/
 *.lcov
 
+sast-report.json
+
 zap.yaml
