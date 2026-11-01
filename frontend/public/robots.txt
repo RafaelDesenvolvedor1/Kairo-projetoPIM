@@ -1,0 +1,12 @@
+User-agent: *
+Disallow: /pacientes/
+Disallow: /financeiro/
+Disallow: /agendamentos/
+Disallow: /locais/
+Disallow: /servicos/
+Disallow: /horarios/
+Allow: /login
+Allow: /cadastro
+Allow: /p/
+
+Sitemap: https://homolog.kairofacul.tech/sitemap.xml
