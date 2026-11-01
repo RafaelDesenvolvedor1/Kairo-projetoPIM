@@ -4,12 +4,31 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
+    
+    <!-- Título descritivo da aplicação -->
+    <title>Kairo - Gestão Clínica e Atendimento em Saúde</title>
+
+    <!-- 1. Resolve o aviso "O documento não tem uma metadescrição" -->
+    <meta
+      name="description"
+      content="Plataforma integrada de gestão clínica para agendamento de consultas, controlo de pacientes e gestão de serviços médicos."
+    />
+
+    <!-- Tags recomendadas de rastreio e indexação -->
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://homolog.kairofacul.tech/login" />
+
+    <!-- Open Graph (redes sociais e pré-visualização) -->
+    <meta property="og:title" content="Kairo - Gestão Clínica" />
+    <meta property="og:description" content="Acesse a plataforma de gestão clínica e agendamento médico." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://homolog.kairofacul.tech/login" />
   </head>
   <body>
     <div id="root"></div>
-    <!-- Script do Tally Forms Widget -->
-    <script async src="https://tally.so/widgets/embed.js" defer></script>
+
+    <!-- Script do Tally com defer para não bloquear a thread principal -->
+    <script src="https://tally.so/widgets/embed.js" defer></script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
