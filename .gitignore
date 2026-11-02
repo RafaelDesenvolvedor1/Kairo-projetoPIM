@@ -45,6 +45,8 @@ relatorio-dast*.json
 # Evidências e relatórios do OWASP ZAP
 zap.log
 zap_out.json
+zap-report.html
+zap-report.json
 
 # Cobertura de código e testes
 coverage/
