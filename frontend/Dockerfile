@@ -21,29 +21,18 @@ FROM nginx:alpine
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Configuração do Nginx: SPA, Segurança de Cabeçalhos, Gzip e Proxy
+# Configuração do Nginx: SPA, Segurança de Cabeçalhos, Gzip e Proxy
 RUN echo 'server { \
     listen 80; \
     root /usr/share/nginx/html; \
     index index.html; \
     \
-    # Oculta a versão do Nginx (mitiga "Server Leaks Version Information") \
+    # Oculta a versão do Nginx \
     server_tokens off; \
     \
     # Compressão Gzip \
     gzip on; \
     gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript image/svg+xml; \
-    \
-    # Cabeçalhos Globais de Segurança (Mitiga alertas Medium e Low do OWASP ZAP) \
-    add_header X-Frame-Options "SAMEORIGIN" always; \
-    add_header X-Content-Type-Options "nosniff" always; \
-    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always; \
-    add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always; \
-    add_header Referrer-Policy "strict-origin-when-cross-origin" always; \
-    add_header Cross-Origin-Opener-Policy "same-origin-allow-popups" always; \
-    add_header Cross-Origin-Resource-Policy "cross-origin" always; \
-    \
-    # Content Security Policy flexível para React + Tally Forms \
-    add_header Content-Security-Policy "default-src '\''self'\''; script-src '\''self'\'' '\''unsafe-inline'\'' https://tally.so; style-src '\''self'\'' '\''unsafe-inline'\'' https://fonts.googleapis.com; font-src '\''self'\'' data: https://fonts.gstatic.com; img-src '\''self'\'' data: blob: https:; frame-src '\''self'\'' https://tally.so; connect-src '\''self'\'' https:;" always; \
     \
     # 1. Regra para robots.txt e sitemap \
     location ~* ^/(robots\.txt|sitemap\.xml)$ { \
@@ -52,17 +41,26 @@ RUN echo 'server { \
         log_not_found off; \
     } \
     \
-    # 2. Ativos estáticos com hash com Cache longo \
+    # 2. Ativos estáticos com hash (Cache longo) \
     location ~* \.(?:js|css|woff2?|svg|png|jpg|jpeg|gif|ico|webp)$ { \
         expires 1y; \
         add_header Cache-Control "public, max-age=31536000, immutable"; \
         access_log off; \
     } \
     \
-    # 3. Roteamento SPA \
+    # 3. Roteamento SPA com todos os cabeçalhos aplicados diretamente \
     location / { \
         try_files $uri $uri/ /index.html; \
-        add_header Cache-Control "no-cache, no-store, must-revalidate"; \
+        \
+        add_header Cache-Control "no-cache, no-store, must-revalidate" always; \
+        add_header X-Frame-Options "SAMEORIGIN" always; \
+        add_header X-Content-Type-Options "nosniff" always; \
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always; \
+        add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always; \
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always; \
+        add_header Cross-Origin-Opener-Policy "same-origin-allow-popups" always; \
+        add_header Cross-Origin-Resource-Policy "cross-origin" always; \
+        add_header Content-Security-Policy "default-src '\''self'\''; script-src '\''self'\'' '\''unsafe-inline'\'' https://tally.so; style-src '\''self'\'' '\''unsafe-inline'\'' https://fonts.googleapis.com; font-src '\''self'\'' data: https://fonts.gstatic.com; img-src '\''self'\'' data: blob: https:; frame-src '\''self'\'' https://tally.so; connect-src '\''self'\'' https:;" always; \
     } \
     \
     # 4. Proxy reverso para o backend \

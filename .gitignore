@@ -47,6 +47,8 @@ zap.log
 zap_out.json
 zap-report.html
 zap-report.json
+zap-report-autenticado.html
+zap-report-autenticado.json
 
 # Cobertura de código e testes
 coverage/
